@@ -1,3 +1,3 @@
 module github.con/quintans/gog
 
-go 1.12
+go 1.13

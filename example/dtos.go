@@ -7,6 +7,7 @@ package example
 type Dto1 struct {
 	age func(string) int
 	// Name is fine
+	//gog:@required
 	name string // forward
 	// valuable
 	value int64
