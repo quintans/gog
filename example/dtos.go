@@ -2,6 +2,7 @@ package example
 
 // Dto1 is the base for the generating the builder
 //
+//gog:allArgsConstructor
 //gog:builder
 //gog:getter
 type Dto1 struct {

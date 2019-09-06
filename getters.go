@@ -1,17 +1,19 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
 	"strings"
 )
 
 type Getters struct {
-	final bytes.Buffer
+	Scribler
 }
 
 func (b *Getters) Name() string {
 	return "getter"
+}
+
+func (b *Getters) Imports(mapper Struct) map[string]string {
+	return make(map[string]string)
 }
 
 func (b *Getters) Generate(mapper Struct) []byte {
@@ -21,11 +23,5 @@ func (b *Getters) Generate(mapper Struct) []byte {
 		b.Printf("}\n")
 	}
 
-	code := b.final.Bytes()
-	b.final.Reset()
-	return code
-}
-
-func (g *Getters) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(&g.final, format, args...)
+	return b.Flush()
 }
