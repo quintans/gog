@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -20,22 +19,31 @@ func (b *Builder) Imports(mapper Struct) map[string]string {
 }
 
 func (b *Builder) Generate(mapper Struct) []byte {
-	var hasRequired bool
-	structName := mapper.Name + "Builder"
-	b.Printf("\ntype %s struct {\n", structName)
+	b.genStructAndNew(mapper)
+	b.genBuilderSetters(mapper)
+	b.genBuild(mapper)
+	b.genToBuild(mapper)
+
+	return b.Flush()
+}
+
+func (b *Builder) genStructAndNew(mapper Struct) {
+	structName := mapper.Name
+	b.Printf("\ntype %sBuilder struct {\n", structName)
 	for _, field := range mapper.Fields {
 		b.Printf("%s\n", UncapFirst(field.String()))
 		if field.Required {
 			b.Printf("%sDefined bool\n", UncapFirst(field.Name))
-			hasRequired = true
 		}
 	}
 	b.Printf("}\n")
 
-	b.Printf("\nfunc New%s() %s { return %s{} }\n", structName, mapper.Name, mapper.Name)
+	b.Printf("\nfunc New%sBuilder() *%sBuilder { return &%sBuilder{} }\n", structName, structName, structName)
+}
 
+func (b *Builder) genBuilderSetters(mapper Struct) {
 	for _, field := range mapper.Fields {
-		b.Printf("\nfunc (b *%s) %s(%s) *%s {\n", structName, strings.Title(field.Name), field.String(), structName)
+		b.Printf("\nfunc (b *%sBuilder) %s(%s) *%sBuilder {\n", mapper.Name, strings.Title(field.Name), field.String(), mapper.Name)
 		if field.Required {
 			b.Printf("b.%sDefined = true\n", field.Name)
 		}
@@ -43,37 +51,58 @@ func (b *Builder) Generate(mapper Struct) []byte {
 		b.Printf("  return b\n")
 		b.Printf("}\n")
 	}
+}
 
-	retCode := mapper.Name
-	if hasRequired {
-		retCode = fmt.Sprintf("(%s, error)", retCode)
-	}
-	b.Printf("\n\nfunc (b *%s) Build() %s {", structName, retCode)
+func (b *Builder) genBuild(mapper Struct) {
+	structName := mapper.Name
+	retCode := "*" + structName
+	b.Printf("\n\nfunc (b *%sBuilder) Build() (%s, error) {\n", structName, retCode)
 	for _, field := range mapper.Fields {
 		if field.Required {
 			b.Printf("if !b.%sDefined {\n", field.Name)
-			b.Printf(" return %s{}, errors.New(\"Field %s is required.\")\n", mapper.Name, field.Name)
+			b.Printf(" return nil, errors.New(\"Field %s is required.\")\n", field.Name)
 			b.Printf("}\n")
 		}
 	}
-	b.Printf("\n  return %s{\n", mapper.Name)
-	for _, field := range mapper.Fields {
-		b.Printf("%s: b.%s,\n", field.Name, UncapFirst(field.Name))
-	}
-	if hasRequired {
-		retCode = ", nil"
-	} else {
-		retCode = ""
-	}
-	b.Printf("  }%s\n", retCode)
-	b.Printf("}\n")
 
-	b.Printf("\n\nfunc (src %s) ToBuild() %s {", mapper.Name, structName)
-	b.Printf("\nreturn %s{\n", structName)
+	b.Printf("\nx := &%s{}\n", structName)
+	for _, field := range mapper.Fields {
+		name, hasRetErr, ok := findSetterName(mapper, field)
+		if ok {
+			if hasRetErr {
+				b.Printf("if err := ")
+			}
+			b.Printf("x.%s(b.%s)", name, UncapFirst(field.Name))
+			if hasRetErr {
+				b.Printf("; err != nil { return nil, err }\n")
+			} else {
+				b.Printf("\n")
+			}
+		} else {
+			b.Printf("x.%s = b.%s\n", field.Name, UncapFirst(field.Name))
+		}
+	}
+	b.Printf("\nreturn x, nil\n")
+	b.Printf("}\n")
+}
+
+func findSetterName(mapper Struct, field Field) (string, bool, bool) {
+	setter := "Set" + strings.Title(field.Name)
+	for _, m := range mapper.Methods {
+		if setter == strings.Title(m.Name) {
+			hasRetErr := len(m.Results) == 1 && m.Results[0].Kind.Name == "error"
+			return m.Name, hasRetErr, true
+		}
+	}
+	return "", false, false
+}
+
+func (b *Builder) genToBuild(mapper Struct) {
+	structName := mapper.Name
+	b.Printf("\n\nfunc (src %s) ToBuild() *%sBuilder {", structName, structName)
+	b.Printf("\nreturn &%sBuilder{\n", structName)
 	for _, field := range mapper.Fields {
 		b.Printf("%s: src.%s,\n", UncapFirst(field.Name), field.Name)
 	}
 	b.Printf("}\n}\n")
-
-	return b.Flush()
 }
