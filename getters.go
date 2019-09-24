@@ -18,8 +18,9 @@ func (b *Getters) Imports(mapper Struct) map[string]string {
 
 func (b *Getters) Generate(mapper Struct) []byte {
 	for _, field := range mapper.Fields {
-		b.Printf("\nfunc (t %s) %s() %s {\n", mapper.Name, strings.Title(field.Name), field.Kind.String())
-		b.Printf("  return t.%s\n", field.Name)
+		fieldName := field.NormalizedName()
+		b.Printf("\nfunc (t %s) %s() %s {\n", mapper.Name, strings.Title(fieldName), field.Kind.String())
+		b.Printf("  return t.%s\n", fieldName)
 		b.Printf("}\n")
 	}
 
