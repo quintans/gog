@@ -17,16 +17,16 @@ func (b *AllArgsConstructor) Generate(mapper Struct) []byte {
 
 	var args Scribler
 	for _, field := range mapper.Fields {
-		if field.Required {
-			args.Printf("%s %s,", UncapFirst(field.NormalizedName()), field.Kind.String())
+		if field.HasTag(requiredTag) {
+			args.Printf("%s %s,", UncapFirst(field.NameOrKindName()), field.Kind.String())
 		}
 	}
 
 	b.Printf("\nfunc New%s(%s) %s {\n", structName, args.Body.String(), structName)
 	b.Printf(" return %s{\n", structName)
 	for _, field := range mapper.Fields {
-		if field.Required {
-			fieldName := field.NormalizedName()
+		if field.HasTag(requiredTag) {
+			fieldName := field.NameOrKindName()
 			b.Printf("	%s: %s,\n", fieldName, UncapFirst(fieldName))
 		}
 	}

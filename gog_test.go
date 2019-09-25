@@ -3,7 +3,6 @@ package main
 import (
 	"go/parser"
 	"go/token"
-	"log"
 	"testing"
 
 	"github.com/andreyvit/diff"
@@ -109,7 +108,7 @@ type DummyBuilder struct {
 
 func NewDummyBuilder() *DummyBuilder { return &DummyBuilder{} }
 
-func (b *DummyBuilder) EmbededOther(other Other) *DummyBuilder {
+func (b *DummyBuilder) WithOther(other Other) *DummyBuilder {
 	b.Other = other
 	return b
 }
@@ -130,19 +129,19 @@ func (b *DummyBuilder) Build() (*Dummy, error) {
 		return nil, errors.New("Field name is required.")
 	}
 
-	x := &Dummy{}
-	x.Other = b.Other
-	x.name = b.name
-	x.value = b.value
+	s := &Dummy{}
+	s.Other = b.Other
+	s.name = b.name
+	s.value = b.value
 
-	return x, nil
+	return s, nil
 }
 
 func (src Dummy) ToBuild() *DummyBuilder {
 	return &DummyBuilder{
 		Other: src.Other,
-		name:   src.name,
-		value:  src.value,
+		name:  src.name,
+		value: src.value,
 	}
 }
 `,
@@ -162,14 +161,9 @@ func run(t *testing.T, in string, out string) {
 	if err != nil {
 		panic(err)
 	}
-	code, err := inspectGoFile(f).generateCode()
-	if err != nil {
-		// Should never happen, but can arise when developing this code.
-		// The user can compile the output to see the error.
-		log.Printf("warning: internal error: invalid Go generated: %s", err)
-	}
+	code := inspectGoFile(f).generateCode()
 	src := string(code)
 	if src != out {
-		t.Errorf("\ngot----------\n%swant----------\n%s-----------\n%s", src, out, diff.CharacterDiff(src, out))
+		t.Errorf("\ngot----------\n%swant----------\n%s-----------\n%s", src, out, diff.CharacterDiff(out, src))
 	}
 }
