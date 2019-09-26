@@ -26,13 +26,11 @@ func (b *AllArgsConstructor) Generate(mapper Struct) []byte {
 		}
 	}
 
-	b.Printf("\nfunc New%s(%s) %s {\n", structName, args.Body.String(), structName)
+	b.Printf("\nfunc New%sAll(%s) %s {\n", structName, args.Body.String(), structName)
 	b.Printf(" return %s{\n", structName)
 	for _, field := range mapper.Fields {
-		if field.HasTag(requiredTag) {
-			fieldName := field.NameOrKindName()
-			b.Printf("	%s: %s,\n", fieldName, UncapFirst(fieldName))
-		}
+		fieldName := field.NameOrKindName()
+		b.Printf("	%s: %s,\n", fieldName, UncapFirst(fieldName))
 	}
 	b.Printf("  }\n")
 	b.Printf("}\n")
