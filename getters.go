@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+func init() {
+	Register(&Getters{})
+}
+
 const ignoreTag = "@ignore"
 
 type Getters struct {
@@ -15,7 +19,7 @@ func (b *Getters) Name() string {
 }
 
 func (b *Getters) Imports(mapper Struct) map[string]string {
-	return make(map[string]string)
+	return map[string]string{}
 }
 
 func (b *Getters) Generate(mapper Struct) []byte {

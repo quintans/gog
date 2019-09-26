@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+func init() {
+	Register(&Builder{})
+}
+
 const requiredTag = "@required"
 
 type Builder struct {
@@ -108,9 +112,9 @@ func builderFieldName(f Field) string {
 func findSetterName(mapper Struct, field Field) (string, bool, bool) {
 	setter := "Set" + strings.Title(field.NameOrKindName())
 	for _, m := range mapper.Methods {
-		if setter == strings.Title(m.Name) {
-			hasRetErr := len(m.Results) == 1 && m.Results[0].Kind.Name == "error"
-			return m.Name, hasRetErr, true
+		if setter == strings.Title(m.Name()) {
+			hasRetErr := len(m.Results) == 1 && m.Results[0].Kind.Name() == "error"
+			return m.Name(), hasRetErr, true
 		}
 	}
 	return "", false, false

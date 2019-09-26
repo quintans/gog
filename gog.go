@@ -27,7 +27,16 @@ var (
 	recur    = flag.Bool("r", false, "scan current dir and sub directories")
 )
 
-type Generator interface {
+var generators = map[string]Generatorer{}
+
+func Register(gen Generatorer) {
+	name := gen.Name()
+	// TODO: don't allow if 'name' already exists
+	generators[name] = gen
+	log.Printf("Registering generator: %s\n", name)
+}
+
+type Generatorer interface {
 	Imports(Struct) map[string]string
 	Generate(Struct) []byte
 	Name() string
@@ -150,7 +159,7 @@ func (p *Parser) generateCode() []byte {
 
 	for _, mapper := range p.Structs {
 		for _, tag := range mapper.Tags {
-			gen, ok := p.generators[tag.Name]
+			gen, ok := generators[tag.Name]
 			if !ok {
 				log.Printf("Could not find generator for %s", tag)
 				continue
@@ -194,29 +203,20 @@ type Parser struct {
 
 	Imports    map[string]string
 	Structs    []*Struct
-	generators map[string]Generator
 	parsedFile *ast.File
 }
 
 func NewParser(parsedFile *ast.File) *Parser {
-	p := &Parser{
+	return &Parser{
 		Imports:    make(map[string]string),
 		Structs:    make([]*Struct, 0),
-		generators: make(map[string]Generator),
 		parsedFile: parsedFile,
 	}
-	p.Register(&Builder{})
-	p.Register(&Getters{})
-	p.Register(&AllArgsConstructor{})
-
-	return p
 }
 
-func (p *Parser) Register(gen Generator) {
-	name := gen.Name()
-	// TODO: don't allow if 'name' already exists
-	p.generators[name] = gen
-	log.Printf("Registering generator: %s\n", name)
+func (p *Parser) Parse(parsedFile *ast.File) {
+	p.Imports = map[string]string{}
+	p.Structs = []*Struct{}
 }
 
 func (p *Parser) genImp(node ast.Node) bool {
@@ -281,11 +281,11 @@ func (p *Parser) funcDecl(node ast.Node) bool {
 		for _, s := range p.Structs {
 			if ident.Name == s.Name {
 				// add to the list of methods
-				kind := parseType(fn.Type)
+				m := parseType(fn.Type).(Method)
 				method := Method{
-					Name:    fn.Name.Name,
-					Args:    kind.Args,
-					Results: kind.Results,
+					FuncName: fn.Name.Name,
+					Args:     m.Args,
+					Results:  m.Results,
 				}
 				s.Methods = append(s.Methods, method)
 			}
@@ -309,7 +309,7 @@ func (p *Parser) isMarkedForGeneration(decl *ast.GenDecl) bool {
 }
 
 func (p *Parser) hasValidGenerationPrefix(text string) bool {
-	for tag := range p.generators {
+	for tag := range generators {
 		if strings.HasPrefix(text, gogPrefix+tag) {
 			return true
 		}
@@ -359,33 +359,38 @@ func parseField(astField *ast.Field) Field {
 	return field
 }
 
-func parseType(expr ast.Expr) Kind {
-	var kind Kind
+func parseType(expr ast.Expr) Kinder {
+	var kind Kinder
 	switch n := expr.(type) {
+	// TODO: Map type
 	// if the type is imported
+	case *ast.MapType:
+		key := parseType(n.Key)
+		val := parseType(n.Value)
+		kind = Map{key, val}
 	case *ast.ArrayType:
-		kind = parseType(n.Elt)
-		kind.Array = true
+		kind = Array{parseType(n.Elt)}
 	case *ast.SelectorExpr:
 		pck := n.X.(*ast.Ident)
-		kind.Name = pck.Name + "." + n.Sel.Name
+		kind = Basic{pck.Name + "." + n.Sel.Name}
 	case *ast.StarExpr:
-		kind = parseType(n.X)
-		kind.Pointer = true
+		kind = Pointer{parseType(n.X)}
 	case *ast.Ident:
-		kind.Name = n.Name
+		kind = Basic{Type: n.Name}
 	case *ast.FuncType:
-		kind.Args = make([]Field, 0)
-		kind.Results = make([]Field, 0)
+
+		args := []Field{}
+		results := []Field{}
 		for _, p := range n.Params.List {
 			//fmt.Printf("====> Param: %s, %#v\n", p.Type, p.Type)
 			arg := parseField(p)
-			kind.Args = append(kind.Args, arg)
+			args = append(args, arg)
 		}
 		for _, res := range n.Results.List {
 			result := parseField(res)
-			kind.Results = append(kind.Results, result)
+			results = append(results, result)
 		}
+		kind = Method{Args: args, Results: results}
 	}
 	return kind
 }

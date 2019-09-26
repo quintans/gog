@@ -1,5 +1,9 @@
 package main
 
+func init() {
+	Register(&AllArgsConstructor{})
+}
+
 type AllArgsConstructor struct {
 	Scribler
 }
@@ -9,7 +13,7 @@ func (b *AllArgsConstructor) Name() string {
 }
 
 func (b *AllArgsConstructor) Imports(mapper Struct) map[string]string {
-	return make(map[string]string)
+	return map[string]string{}
 }
 
 func (b *AllArgsConstructor) Generate(mapper Struct) []byte {

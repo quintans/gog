@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Struct struct {
 	Tags
 	Name    string
@@ -7,10 +9,38 @@ type Struct struct {
 	Methods []Method
 }
 
+type Method struct {
+	FuncName string
+	Args     []Field
+	Results  []Field
+}
+
+func (m Method) Name() string {
+	return m.FuncName
+}
+
+func (m Method) String() string {
+	var s string
+	if m.FuncName != "" {
+		s += m.FuncName + " "
+	}
+	s += "func("
+	for _, v := range m.Args {
+		s += v.String() + ","
+	}
+	s += ") ("
+	for _, v := range m.Results {
+		s += v.String() + ","
+	}
+	s += ")"
+
+	return s
+}
+
 type Field struct {
 	Tags
 	Name string
-	Kind Kind
+	Kind Kinder
 }
 
 func (f Field) String() string {
@@ -24,49 +54,55 @@ func (f Field) NameOrKindName() string {
 	if f.Name != "" {
 		return f.Name
 	}
-	return f.Kind.Name
+	return f.Kind.Name()
 }
 
-type Kind struct {
-	Name    string
-	Pointer bool
-	Array   bool
-	Args    []Field
-	Results []Field
+type TypeEnum int
+
+type Kinder interface {
+	Name() string
+	String() string
 }
 
-type Method struct {
-	Name    string
-	Args    []Field
-	Results []Field
+type Basic struct {
+	Type string
 }
 
-func (k Kind) IsFunc() bool {
-	return k.Args != nil
+func (b Basic) Name() string {
+	return b.Type
 }
 
-func (p Kind) String() string {
-	var s string
-	if p.Array {
-		s += "[]"
-	}
-	if p.Pointer {
-		s += "*"
-	}
-	if p.IsFunc() {
-		s += "func("
-		for _, v := range p.Args {
-			s += v.String() + ","
-		}
-		s += ") ("
-		for _, v := range p.Results {
-			s += v.String() + ","
-		}
-		s += ")"
-	} else {
-		s += p.Name
-	}
-	return s
+func (b Basic) String() string {
+	return b.Type
+}
+
+type Pointer struct {
+	Kinder
+}
+
+func (p Pointer) String() string {
+	return "*" + p.Name()
+}
+
+type Array struct {
+	Kinder
+}
+
+func (a Array) String() string {
+	return "[]" + a.Kinder.String()
+}
+
+type Map struct {
+	Key Kinder
+	Val Kinder
+}
+
+func (m Map) Name() string {
+	return "map"
+}
+
+func (m Map) String() string {
+	return fmt.Sprintf("map[%s]%s", m.Key.String(), m.Val.String())
 }
 
 type Tag struct {
