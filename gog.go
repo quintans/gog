@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+const version = "0.0.1-1"
+
 const gofilesExt = ".go"
 
 const (
@@ -25,6 +27,7 @@ const (
 var (
 	fileName = flag.String("f", "", "file name to be parsed, overriding the environment variable GOFILE value")
 	recur    = flag.Bool("r", false, "scan current dir and sub directories")
+	ver      = flag.Bool("v", "", "version")
 )
 
 var generators = map[string]Generatorer{}
@@ -44,6 +47,10 @@ type Generatorer interface {
 
 func main() {
 	flag.Parse()
+
+	if *ver {
+		fmt.Println("gog version", version)
+	}
 
 	fileToParse := getFileToParse()
 	if fileToParse != "" {
