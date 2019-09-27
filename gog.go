@@ -27,7 +27,7 @@ const (
 var (
 	fileName = flag.String("f", "", "file name to be parsed, overriding the environment variable GOFILE value")
 	recur    = flag.Bool("r", false, "scan current dir and sub directories")
-	ver      = flag.Bool("v", "", "version")
+	ver      = flag.Bool("v", false, "version")
 )
 
 var generators = map[string]Generatorer{}
