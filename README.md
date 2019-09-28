@@ -9,7 +9,7 @@ generates:
 * Value Objects - `gog:value`
 
 ## Instalation
-`go get -u github.com/quintans/gog`
+`go get -u github.com/quintans/gog/cmd/gog`
 
 ## Guide
 Tag your struct, with the generator tag and then execute `gog`.
