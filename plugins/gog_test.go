@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/andreyvit/diff"
-	"github.con/quintans/gog/generator"
+	"github.com/quintans/gog/generator"
 )
 
 func TestAllArgsConstructor(t *testing.T) {

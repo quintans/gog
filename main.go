@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.con/quintans/gog/generator"
+	"github.com/quintans/gog/generator"
 
-	_ "github.con/quintans/gog/plugins"
+	_ "github.com/quintans/gog/plugins"
 )
 
 const version = "0.0.2"

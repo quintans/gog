@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	"github.con/quintans/gog/generator"
+	"github.com/quintans/gog/generator"
 )
 
 func init() {

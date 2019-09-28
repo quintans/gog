@@ -1,4 +1,4 @@
-module github.con/quintans/gog
+module github.com/quintans/gog
 
 go 1.13
 

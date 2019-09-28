@@ -3,7 +3,7 @@ package plugins
 import (
 	"strings"
 
-	"github.con/quintans/gog/generator"
+	"github.com/quintans/gog/generator"
 )
 
 func init() {
