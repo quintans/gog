@@ -24,7 +24,7 @@ type Foo struct {
 }
 ```
 
-will generate a file `src_gog.go` with
+will generate a file `src.gog.go` with
 
 
 ```go

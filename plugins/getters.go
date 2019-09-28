@@ -1,30 +1,32 @@
-package main
+package plugins
 
 import (
 	"strings"
+
+	"github.con/quintans/gog/generator"
 )
 
 func init() {
-	Register(&Getters{})
+	generator.Register(&Getters{})
 }
 
-const ignoreTag = "@ignore"
+const IgnoreTag = "@ignore"
 
 type Getters struct {
-	Scribler
+	generator.Scribler
 }
 
 func (b *Getters) Name() string {
 	return "getter"
 }
 
-func (b *Getters) Imports(mapper Struct) map[string]string {
+func (b *Getters) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Getters) Generate(mapper Struct) []byte {
+func (b *Getters) Generate(mapper generator.Struct) []byte {
 	for _, field := range mapper.Fields {
-		if !field.HasTag(ignoreTag) {
+		if !field.HasTag(IgnoreTag) {
 			fieldName := field.NameOrKindName()
 			b.Printf("\nfunc (t %s) %s() %s {\n", mapper.Name, strings.Title(fieldName), field.Kind.String())
 			b.Printf("  return t.%s\n", fieldName)

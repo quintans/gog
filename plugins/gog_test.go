@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"go/parser"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/andreyvit/diff"
+	"github.con/quintans/gog/generator"
 )
 
 func TestAllArgsConstructor(t *testing.T) {
@@ -15,7 +16,7 @@ func TestAllArgsConstructor(t *testing.T) {
 		out  string
 	}{
 		{
-			"AllArgsConstructor 1 required",
+			"RequiredArgsConstructor 1 required",
 			`
 package p
 
@@ -245,7 +246,7 @@ func run(t *testing.T, in string, out string) {
 	if err != nil {
 		panic(err)
 	}
-	code := inspectGoFile(f).generateCode()
+	code := generator.InspectGoFile(f).GenerateCode()
 	src := string(code)
 	if src != out {
 		t.Errorf("\ngot----------\n%swant----------\n%s-----------\n%s", src, out, diff.CharacterDiff(out, src))

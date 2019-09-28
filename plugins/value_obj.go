@@ -1,11 +1,13 @@
-package main
+package plugins
 
 import (
 	"strings"
+
+	"github.con/quintans/gog/generator"
 )
 
 func init() {
-	Register(&ValueObj{})
+	generator.Register(&ValueObj{})
 }
 
 // Equaler defines the interface to be implemented by struct that wish to verify equality
@@ -19,26 +21,26 @@ type Cloner interface {
 }
 
 type ValueObj struct {
-	Scribler
+	generator.Scribler
 }
 
 func (b *ValueObj) Name() string {
 	return "value"
 }
 
-func (b *ValueObj) Imports(mapper Struct) map[string]string {
+func (b *ValueObj) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{
 		"github.com/quintans/gog": "",
 	}
 }
 
-func (b *ValueObj) Generate(mapper Struct) []byte {
+func (b *ValueObj) Generate(mapper generator.Struct) []byte {
 	for _, field := range mapper.Fields {
-		if !field.HasTag(ignoreTag) {
+		if !field.HasTag(IgnoreTag) {
 			switch t := field.Kind.(type) {
-			case Map:
+			case generator.Map:
 				b.genMap(mapper, field.NameOrKindName(), t)
-			case Array:
+			case generator.Array:
 				b.genArray(mapper, field.NameOrKindName(), t)
 			default:
 				b.genDefault(mapper, field)
@@ -49,14 +51,14 @@ func (b *ValueObj) Generate(mapper Struct) []byte {
 	return b.Flush()
 }
 
-func (b *ValueObj) genDefault(mapper Struct, field Field) {
+func (b *ValueObj) genDefault(mapper generator.Struct, field generator.Field) {
 	fieldName := field.NameOrKindName()
 	b.Printf("\nfunc (t %s) %s() %s {\n", mapper.Name, strings.Title(fieldName), field.Kind.String())
 	b.Printf("  return t.%s\n", fieldName)
 	b.Printf("}\n")
 }
 
-func (b *ValueObj) genArray(mapper Struct, fieldName string, arr Array) {
+func (b *ValueObj) genArray(mapper generator.Struct, fieldName string, arr generator.Array) {
 	subKind := arr.Kinder.String()
 	b.Printf("\nfunc (t %s) %s() []%s {\n", mapper.Name, strings.Title(fieldName), subKind)
 	b.Printf("	if len(t.%s) == 0 {\n", fieldName)
@@ -80,7 +82,7 @@ func (b *ValueObj) genArray(mapper Struct, fieldName string, arr Array) {
 	b.Printf("}\n")
 }
 
-func (b *ValueObj) genMap(mapper Struct, fieldName string, m Map) {
+func (b *ValueObj) genMap(mapper generator.Struct, fieldName string, m generator.Map) {
 	keyKind := m.Key.String()
 	valKind := m.Val.String()
 	b.Printf("\nfunc (t %s) %s() map[%s]%s {\n", mapper.Name, strings.Title(fieldName), keyKind, valKind)
