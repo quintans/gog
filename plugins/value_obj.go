@@ -30,7 +30,7 @@ func (b *ValueObj) Name() string {
 
 func (b *ValueObj) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{
-		"github.com/quintans/gog": "",
+		"\"github.com/quintans/gog\"": "",
 	}
 }
 

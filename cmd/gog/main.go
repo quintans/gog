@@ -10,7 +10,7 @@ import (
 	_ "github.com/quintans/gog/plugins"
 )
 
-const version = "0.0.2"
+const version = "0.0.3"
 
 var (
 	fileName = flag.String("f", "", "file name to be parsed, overriding the environment variable GOFILE value")

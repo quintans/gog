@@ -21,16 +21,15 @@ func (b *RequiredArgsConstructor) Imports(mapper generator.Struct) map[string]st
 }
 
 func (s *RequiredArgsConstructor) Generate(mapper generator.Struct) []byte {
-	structName := mapper.Name
-
-	var args generator.Scribler
+	args := &generator.Scribler{}
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
 			args.Printf("%s %s,", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
 		}
 	}
-
-	s.Printf("\nfunc New%sRequired(%s) %s {\n", structName, args.Body.String(), structName)
+	
+	structName := mapper.Name
+	s.Printf("\nfunc New%sRequired(%s) %s {\n", structName, args, structName)
 	s.Printf(" return %s{\n", structName)
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
