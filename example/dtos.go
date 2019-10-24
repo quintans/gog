@@ -4,7 +4,7 @@ package example
 //
 //gog:allArgsConstructor
 //gog:builder
-//gog:getter
+//gog:getter {"star":true}
 type Dto1 struct {
 	age func(string) int
 	// Name is fine
@@ -27,7 +27,7 @@ func Greet(s string) string {
 
 // Dto2 for a second builder
 //
-//gog:builder
+//gog:builder {"star":false}
 //gog:getter
 type Dto2 struct {
 	cenas []int

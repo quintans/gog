@@ -12,6 +12,10 @@ func init() {
 
 const RequiredTag = "@required"
 
+type BuilderOptions struct {
+	Star bool
+}
+
 type Builder struct {
 	generator.Scribler
 }
@@ -26,13 +30,22 @@ func (b *Builder) Imports(mapper generator.Struct) map[string]string {
 	}
 }
 
-func (b *Builder) Generate(mapper generator.Struct) []byte {
+func (b *Builder) Generate(mapper generator.Struct) ([]byte, error) {
+	options := BuilderOptions{
+		Star: true,
+	}
+	if tag, ok := mapper.FindTag(b.Name()); ok {
+		if err := tag.Unmarshal(&options); err != nil {
+			return nil, err
+		}
+	}
+
 	b.genStructAndNew(mapper)
 	b.genBuilderSetters(mapper)
-	b.genBuild(mapper)
+	b.genBuild(mapper, options)
 	b.genToBuild(mapper)
 
-	return b.Flush()
+	return b.Flush(), nil
 }
 
 func (b *Builder) genStructAndNew(mapper generator.Struct) {
@@ -71,13 +84,20 @@ func (b *Builder) genBuilderSetters(mapper generator.Struct) {
 	}
 }
 
-func (b *Builder) genBuild(mapper generator.Struct) {
+func (b *Builder) genBuild(mapper generator.Struct, options BuilderOptions) {
 	structName := mapper.Name
-	retCode := "*" + structName
 
 	s := &generator.Scribler{}
+	var retCode string
+	if options.Star {
+		retCode = "*"
+		s.Printf("s := &%s{}\n", structName)
+	} else {
+		s.Printf("s := %s{}\n", structName)
+	}
+	retCode += structName
+
 	var hasError bool
-	s.Printf("s := &%s{}\n", structName)
 	for _, field := range mapper.Fields {
 		fieldName := field.NameOrKindName()
 		name, hasRetErr, ok := findSetterName(mapper, field)

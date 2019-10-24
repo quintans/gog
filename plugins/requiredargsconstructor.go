@@ -20,7 +20,7 @@ func (b *RequiredArgsConstructor) Imports(mapper generator.Struct) map[string]st
 	return map[string]string{}
 }
 
-func (s *RequiredArgsConstructor) Generate(mapper generator.Struct) []byte {
+func (s *RequiredArgsConstructor) Generate(mapper generator.Struct) ([]byte, error) {
 	args := &generator.Scribler{}
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
@@ -40,5 +40,5 @@ func (s *RequiredArgsConstructor) Generate(mapper generator.Struct) []byte {
 	s.Printf("  }\n")
 	s.Printf("}\n")
 
-	return s.Flush()
+	return s.Flush(), nil
 }

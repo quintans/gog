@@ -1,6 +1,9 @@
 package generator
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Struct struct {
 	Tags
@@ -117,6 +120,13 @@ func (m Map) String() string {
 type Tag struct {
 	Name string
 	Args string
+}
+
+func (t Tag) Unmarshal(v interface{}) error {
+	if t.Args == "" {
+		return nil
+	}
+	return json.Unmarshal([]byte(t.Args), v)
 }
 
 type Tags []Tag

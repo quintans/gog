@@ -8,19 +8,36 @@ func init() {
 	generator.Register(&AllArgsConstructor{})
 }
 
+type AllArgsConstructorOptions struct {
+	Star bool
+}
+
 type AllArgsConstructor struct {
 	generator.Scribler
 }
 
-func (b *AllArgsConstructor) Name() string {
+func (s *AllArgsConstructor) Name() string {
 	return "allArgsConstructor"
 }
 
-func (b *AllArgsConstructor) Imports(mapper generator.Struct) map[string]string {
+func (s *AllArgsConstructor) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (s *AllArgsConstructor) Generate(mapper generator.Struct) []byte {
+func (s *AllArgsConstructor) Generate(mapper generator.Struct) ([]byte, error) {
+	options := AllArgsConstructorOptions{
+		Star: true,
+	}
+	if tag, ok := mapper.FindTag(s.Name()); ok {
+		if err := tag.Unmarshal(&options); err != nil {
+			return nil, err
+		}
+	}
+
+	return s.generate(mapper, options)
+}
+
+func (s *AllArgsConstructor) generate(mapper generator.Struct, options AllArgsConstructorOptions) ([]byte, error) {
 	structName := mapper.Name
 
 	args := &generator.Scribler{}
@@ -37,5 +54,5 @@ func (s *AllArgsConstructor) Generate(mapper generator.Struct) []byte {
 	s.Printf("  }\n")
 	s.Printf("}\n")
 
-	return s.Flush()
+	return s.Flush(), nil
 }

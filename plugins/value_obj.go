@@ -21,14 +21,16 @@ func (b *ValueObj) Name() string {
 }
 
 func (b *ValueObj) Imports(mapper generator.Struct) map[string]string {
-	return map[string]string{
-		"\"github.com/quintans/gog\"": "",
-	}
+	return map[string]string{}
 }
 
-func (b *ValueObj) Generate(mapper generator.Struct) []byte {
+func (b *ValueObj) Generate(mapper generator.Struct) ([]byte, error) {
 	allArgs := &AllArgsConstructor{}
-	b.Body.Write(allArgs.Generate(mapper))
+	code, err := allArgs.generate(mapper, AllArgsConstructorOptions{Star: false})
+	if err != nil {
+		return nil, err
+	}
+	b.Body.Write(code)
 
 	for _, field := range mapper.Fields {
 		if !field.HasTag(IgnoreTag) {
@@ -39,7 +41,7 @@ func (b *ValueObj) Generate(mapper generator.Struct) []byte {
 		}
 	}
 
-	return b.Flush()
+	return b.Flush(), nil
 }
 
 func (b *ValueObj) genGetter(mapper generator.Struct, field generator.Field) {

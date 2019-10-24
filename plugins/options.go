@@ -22,19 +22,17 @@ func (b *Options) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Options) Generate(mapper generator.Struct) []byte {
+func (b *Options) Generate(mapper generator.Struct) ([]byte, error) {
 	for _, field := range mapper.Fields {
 		if !field.HasTag(RequiredTag) && !field.HasTag(IgnoreTag) {
 			fieldName := field.NameOrKindName()
 			optionFunc := mapper.Name + strings.Title(fieldName)
-			if _, ok := mapper.FindMethod(optionFunc); !ok {
-				arg := generator.UncapFirst(fieldName)
-				b.Printf("func %s(%s %s) func(*%s) {\n", optionFunc, arg, field.Kind.String(), mapper.Name)
-				b.Printf("	return func(t *%s) {\n", mapper.Name)
-				b.Printf("		t.%s = %s\n", fieldName, arg)
-				b.Printf("	}\n")
-				b.Printf("}\n\n")
-			}
+			arg := generator.UncapFirst(fieldName)
+			b.Printf("func %s(%s %s) func(*%s) {\n", optionFunc, arg, field.Kind.String(), mapper.Name)
+			b.Printf("	return func(t *%s) {\n", mapper.Name)
+			b.Printf("		t.%s = %s\n", fieldName, arg)
+			b.Printf("	}\n")
+			b.Printf("}\n\n")
 		}
 	}
 
@@ -61,5 +59,5 @@ func (b *Options) Generate(mapper generator.Struct) []byte {
 	b.Printf("	return t\n")
 	b.Printf("}\n")
 
-	return b.Flush()
+	return b.Flush(), nil
 }
