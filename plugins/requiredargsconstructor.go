@@ -27,7 +27,7 @@ func (s *RequiredArgsConstructor) Generate(mapper generator.Struct) []byte {
 			args.Printf("%s %s,", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
 		}
 	}
-	
+
 	structName := mapper.Name
 	s.Printf("\nfunc New%sRequired(%s) %s {\n", structName, args, structName)
 	s.Printf(" return %s{\n", structName)

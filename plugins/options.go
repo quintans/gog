@@ -26,12 +26,15 @@ func (b *Options) Generate(mapper generator.Struct) []byte {
 	for _, field := range mapper.Fields {
 		if !field.HasTag(RequiredTag) && !field.HasTag(IgnoreTag) {
 			fieldName := field.NameOrKindName()
-			arg := generator.UncapFirst(fieldName)
-			b.Printf("func %s%s(%s %s) func(*%s) {\n", mapper.Name, strings.Title(fieldName), arg, field.Kind.String(), mapper.Name)
-			b.Printf("	return func(t *%s) {\n", mapper.Name)
-			b.Printf("		t.%s = %s\n", fieldName, arg)
-			b.Printf("	}\n")
-			b.Printf("}\n\n")
+			optionFunc := mapper.Name + strings.Title(fieldName)
+			if _, ok := mapper.FindMethod(optionFunc); !ok {
+				arg := generator.UncapFirst(fieldName)
+				b.Printf("func %s(%s %s) func(*%s) {\n", optionFunc, arg, field.Kind.String(), mapper.Name)
+				b.Printf("	return func(t *%s) {\n", mapper.Name)
+				b.Printf("		t.%s = %s\n", fieldName, arg)
+				b.Printf("	}\n")
+				b.Printf("}\n\n")
+			}
 		}
 	}
 

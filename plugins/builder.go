@@ -57,19 +57,17 @@ func (b *Builder) genStructAndNew(mapper generator.Struct) {
 
 func (b *Builder) genBuilderSetters(mapper generator.Struct) {
 	for _, field := range mapper.Fields {
-		if !field.HasTag(RequiredTag) {
-			builderFieldName := builderFieldName(field)
-			fieldName := field.NameOrKindName()
-			method := strings.Title(fieldName)
-			if field.Name == "" {
-				method = "With" + method
-			}
-			argName := generator.UncapFirst(fieldName)
-			b.Printf("\nfunc (b *%sBuilder) %s(%s %s) *%sBuilder {\n", mapper.Name, method, argName, field.Kind.String(), mapper.Name)
-			b.Printf("	b.%s = %s\n", builderFieldName, argName)
-			b.Printf("  return b\n")
-			b.Printf("}\n")
+		builderFieldName := builderFieldName(field)
+		fieldName := field.NameOrKindName()
+		method := strings.Title(fieldName)
+		if field.Name == "" {
+			method = "With" + method
 		}
+		argName := generator.UncapFirst(fieldName)
+		b.Printf("\nfunc (b *%sBuilder) %s(%s %s) *%sBuilder {\n", mapper.Name, method, argName, field.Kind.String(), mapper.Name)
+		b.Printf("	b.%s = %s\n", builderFieldName, argName)
+		b.Printf("  return b\n")
+		b.Printf("}\n")
 	}
 }
 
@@ -119,11 +117,9 @@ func builderFieldName(f generator.Field) string {
 
 func findSetterName(mapper generator.Struct, field generator.Field) (string, bool, bool) {
 	setter := "Set" + strings.Title(field.NameOrKindName())
-	for _, m := range mapper.Methods {
-		if setter == strings.Title(m.Name()) {
-			hasRetErr := len(m.Results) == 1 && m.Results[0].Kind.Name() == "error"
-			return m.Name(), hasRetErr, true
-		}
+	if m, ok := mapper.FindMethod(setter); ok {
+		hasRetErr := len(m.Results) == 1 && m.Results[0].Kind.Name() == "error"
+		return m.Name(), hasRetErr, true
 	}
 	return "", false, false
 }

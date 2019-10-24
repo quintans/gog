@@ -9,6 +9,15 @@ type Struct struct {
 	Methods []Method
 }
 
+func (s Struct) FindMethod(name string) (Method, bool) {
+	for _, m := range s.Methods {
+		if name == m.Name() {
+			return m, true
+		}
+	}
+	return Method{}, false
+}
+
 type Method struct {
 	FuncName string
 	Args     []Field
