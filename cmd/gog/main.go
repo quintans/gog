@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/quintans/gog/config"
 	"github.com/quintans/gog/generator"
 
 	_ "github.com/quintans/gog/plugins"
 )
-
-const version = "0.1.0"
 
 var (
 	fileName = flag.String("f", "", "file name to be parsed, overriding the environment variable GOFILE value")
@@ -21,8 +20,9 @@ var (
 func main() {
 	flag.Parse()
 
+	fmt.Println("gog version", config.Version)
 	if *ver {
-		fmt.Println("gog version", version)
+		return
 	}
 
 	fileToParse := getFileToParse()

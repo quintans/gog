@@ -1,14 +1,18 @@
 package example
 
+//go:generate gog
+
+import "github.com/quintans/gog/example/vo"
+
 // Dto1 is the base for the generating the builder
 //
-//gog:allArgsConstructor
-//gog:builder
-//gog:getter {"star":true}
+// gog:allArgsConstructor
+// gog:builder
+// gog:getters {"pointer":true}
 type Dto1 struct {
 	age func(string) int
 	// Name is fine
-	//gog:@required
+	// gog:@required
 	name  string
 	value int64
 	sex   bool
@@ -27,8 +31,14 @@ func Greet(s string) string {
 
 // Dto2 for a second builder
 //
-//gog:builder {"star":false}
-//gog:getter
+// gog:builder {"pointer":false}
+// gog:getters
 type Dto2 struct {
-	cenas []int
+	things []int
+}
+
+// gog:record
+type Command struct {
+	// gog:@required
+	id vo.FooID
 }

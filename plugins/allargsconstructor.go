@@ -8,51 +8,59 @@ func init() {
 	generator.Register(&AllArgsConstructor{})
 }
 
-type AllArgsConstructorOptions struct {
-	Star bool
-}
+type AllArgsConstructorOptions struct{}
 
 type AllArgsConstructor struct {
 	generator.Scribler
 }
 
-func (s *AllArgsConstructor) Name() string {
+func (s AllArgsConstructor) Name() string {
 	return "allArgsConstructor"
 }
 
-func (s *AllArgsConstructor) Imports(mapper generator.Struct) map[string]string {
+func (s AllArgsConstructor) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (s *AllArgsConstructor) Generate(mapper generator.Struct) ([]byte, error) {
-	options := AllArgsConstructorOptions{
-		Star: true,
-	}
-	if tag, ok := mapper.FindTag(s.Name()); ok {
-		if err := tag.Unmarshal(&options); err != nil {
-			return nil, err
-		}
-	}
-
-	return s.generate(mapper, options)
+func (s *AllArgsConstructor) GenerateBody(mapper generator.Struct) error {
+	s.WriteBody(mapper, AllArgsConstructorOptions{})
+	return nil
 }
 
-func (s *AllArgsConstructor) generate(mapper generator.Struct, options AllArgsConstructorOptions) ([]byte, error) {
-	structName := mapper.Name
-
+func (c *AllArgsConstructor) WriteBody(mapper generator.Struct, _ AllArgsConstructorOptions) {
 	args := &generator.Scribler{}
+	hasError := false
 	for _, field := range mapper.Fields {
-		args.Printf("%s %s,", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
+		args.BPrintf("%s %s,\n", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
+		if !hasError && field.HasTag(RequiredTag) {
+			hasError = true
+		}
+	}
+	structName := mapper.Name
+	receiver := generator.UncapFirstSingle(structName)
+	s := &generator.Scribler{}
+	if hasError {
+		_ = PrintZeroCheck(s, mapper, "")
 	}
 
-	s.Printf("\nfunc New%s(%s) %s {\n", structName, args, structName)
-	s.Printf(" return %s{\n", structName)
+	s.BPrintf("%s := %s{\n", receiver, structName)
 	for _, field := range mapper.Fields {
 		fieldName := field.NameOrKindName()
-		s.Printf("	%s: %s,\n", fieldName, generator.UncapFirst(fieldName))
+		s.BPrintf("	%s: %s,\n", fieldName, field.NameForField())
 	}
-	s.Printf("  }\n")
-	s.Printf("}\n")
+	s.BPrintf("  }\n")
 
-	return s.Flush(), nil
+	hasError = PrintValidate(s, mapper, receiver) || hasError
+
+	retCode := structName
+	if hasError {
+		retCode = "(" + retCode + ", error)"
+	}
+	c.BPrintf("\nfunc New%s(\n%s) %s {\n", structName, args, retCode)
+	c.BPrintf("%s\n", s)
+	c.BPrintf("return %s", receiver)
+	if hasError {
+		c.BPrintf(", nil")
+	}
+	c.BPrintf("\n}\n")
 }

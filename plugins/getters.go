@@ -10,10 +10,8 @@ func init() {
 	generator.Register(&Getters{})
 }
 
-const IgnoreTag = "@ignore"
-
 type GetterOptions struct {
-	Star bool
+	Pointer bool
 }
 
 type Getters struct {
@@ -21,32 +19,44 @@ type Getters struct {
 }
 
 func (b *Getters) Name() string {
-	return "getter"
+	return "getters"
 }
 
 func (b *Getters) Imports(mapper generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Getters) Generate(mapper generator.Struct) ([]byte, error) {
+func (b *Getters) GenerateBody(mapper generator.Struct) error {
 	options := GetterOptions{}
 	if tag, ok := mapper.FindTag(b.Name()); ok {
 		if err := tag.Unmarshal(&options); err != nil {
-			return nil, err
-		}
-	}
-	var star string
-	if options.Star {
-		star = "*"
-	}
-	for _, field := range mapper.Fields {
-		if !field.HasTag(IgnoreTag) {
-			fieldName := field.NameOrKindName()
-			b.Printf("\nfunc (t %s%s) %s() %s {\n", star, mapper.Name, strings.Title(fieldName), field.Kind.String())
-			b.Printf("  return t.%s\n", fieldName)
-			b.Printf("}\n")
+			return err
 		}
 	}
 
-	return b.Flush(), nil
+	b.WriteBody(mapper, options)
+	return nil
+}
+
+func (b *Getters) WriteBody(mapper generator.Struct, options GetterOptions) error {
+	var star string
+	if options.Pointer {
+		star = "*"
+	}
+	structName := mapper.Name
+	receiver := generator.UncapFirstSingle(structName)
+	for _, field := range mapper.Fields {
+		if !field.HasTag(IgnoreTag) {
+			fieldName := field.NameOrKindName()
+			getter := strings.Title(fieldName)
+			if field.IsNested() {
+				getter = "Get" + getter
+			}
+			b.BPrintf("\nfunc (%s %s%s) %s() %s {\n", receiver, star, structName, getter, field.Kind.String())
+			b.BPrintf("  return %s.%s\n", receiver, fieldName)
+			b.BPrintf("}\n")
+		}
+	}
+
+	return nil
 }
