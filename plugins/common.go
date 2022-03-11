@@ -45,14 +45,14 @@ func PrintIsZero(s *generator.Scribler, mapper generator.Struct) bool {
 
 	receiver := generator.UncapFirstSingle(structName)
 	s.BPrintf("\nfunc (%s %s) IsZero() bool {\n", receiver, structName)
-	allPrimitive := true
-	for _, v := range mapper.Fields {
-		if !v.IsPrimitive() {
-			allPrimitive = false
-			break
+	comparable := true
+	for _, f := range mapper.Fields {
+		_, basic := f.Kind.(generator.Basic)
+		if !basic {
+			comparable = false
 		}
 	}
-	if allPrimitive {
+	if comparable {
 		s.BPrintf("  return %s == %s{}\n", receiver, structName)
 	} else {
 		last := len(mapper.Fields) - 1

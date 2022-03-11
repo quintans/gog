@@ -223,7 +223,7 @@ func (c Command) Id() vo.FooID {
 }
 
 func (c Command) IsZero() bool {
-	return (c.id == vo.FooID{})
+	return c == Command{}
 }
 
 func (c Command) String() string {
