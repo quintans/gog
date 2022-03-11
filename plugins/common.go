@@ -45,7 +45,25 @@ func PrintIsZero(s *generator.Scribler, mapper generator.Struct) bool {
 
 	receiver := generator.UncapFirstSingle(structName)
 	s.BPrintf("\nfunc (%s %s) IsZero() bool {\n", receiver, structName)
-	s.BPrintf("  return %s == %s{}\n", receiver, structName)
+	allPrimitive := true
+	for _, v := range mapper.Fields {
+		if !v.IsPrimitive() {
+			allPrimitive = false
+			break
+		}
+	}
+	if allPrimitive {
+		s.BPrintf("  return %s == %s{}\n", receiver, structName)
+	} else {
+		last := len(mapper.Fields) - 1
+		s.BPrintf("  return ")
+		for k, field := range mapper.Fields {
+			s.BPrintf("%s", field.Kind.ZeroCondition(receiver+"."+field.NameForField()))
+			if k < last {
+				s.BPrintf(" ||\n")
+			}
+		}
+	}
 	s.BPrintf("}\n")
 
 	return true

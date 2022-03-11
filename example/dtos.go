@@ -8,7 +8,6 @@ import "github.com/quintans/gog/example/vo"
 //
 // gog:allArgsConstructor
 // gog:builder
-// gog:getters {"pointer":true}
 type Dto1 struct {
 	age func(string) int
 	// Name is fine
@@ -31,8 +30,7 @@ func Greet(s string) string {
 
 // Dto2 for a second builder
 //
-// gog:builder {"pointer":false}
-// gog:getters
+// gog:builder
 type Dto2 struct {
 	things []int
 }

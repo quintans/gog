@@ -123,7 +123,7 @@ func InspectGoFile(parsedFile *ast.File) *Parser {
 func (p *Parser) generateGoFile(filename string) {
 	code, err := p.GenerateCode(filename)
 	die(err, "Generating code")
-	err = ioutil.WriteFile(filename, code, 0644)
+	err = ioutil.WriteFile(filename, code, 0o644)
 	die(err, "Writing output")
 }
 
@@ -374,8 +374,11 @@ func parseType(expr ast.Expr) Kinder {
 		kind = Pointer{parseType(n.X)}
 	case *ast.Ident:
 		kind = Basic{Type: n.Name}
+	case *ast.InterfaceType:
+		if n.Methods == nil || len(n.Methods.List) == 0 {
+			kind = Interface{}
+		}
 	case *ast.FuncType:
-
 		args := []Field{}
 		results := []Field{}
 		if n.Params != nil {
@@ -391,6 +394,8 @@ func parseType(expr ast.Expr) Kinder {
 			}
 		}
 		kind = Method{Args: args, Results: results}
+	default:
+		fmt.Printf("unknown type %+v", n)
 	}
 	return kind
 }

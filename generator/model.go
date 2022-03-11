@@ -3,6 +3,7 @@ package generator
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type Struct struct {
@@ -32,21 +33,21 @@ func (m Method) Name() string {
 }
 
 func (m Method) String() string {
-	var s string
+	var s strings.Builder
 	if m.FuncName != "" {
-		s += m.FuncName + " "
+		s.WriteString(m.FuncName + " ")
 	}
-	s += "func("
+	s.WriteString("func(")
 	for _, v := range m.Args {
-		s += v.String() + ","
+		s.WriteString(v.String() + ",")
 	}
-	s += ") ("
+	s.WriteString(") (")
 	for _, v := range m.Results {
-		s += v.String() + ","
+		s.WriteString(v.String() + ",")
 	}
-	s += ")"
+	s.WriteString(")")
 
-	return s
+	return s.String()
 }
 
 func (Method) ZeroCondition(field string) string {
@@ -84,6 +85,11 @@ func (f Field) IsNested() bool {
 	return f.Name == ""
 }
 
+func (f Field) IsPrimitive() bool {
+	_, ok := Zero(f.Kind.String())
+	return ok
+}
+
 type TypeEnum int
 
 type Kinder interface {
@@ -113,6 +119,11 @@ func (b Basic) ZeroCondition(field string) string {
 		return fmt.Sprintf("%s == %s", field, zero)
 	}
 	return fmt.Sprintf("(%s == %s{})", field, b.String())
+}
+
+func Zero(typ string) (string, bool) {
+	z, ok := zeros[typ]
+	return z, ok
 }
 
 var zeros = map[string]string{
@@ -145,6 +156,10 @@ func (p Pointer) String() string {
 	return "*" + p.Name()
 }
 
+func (Pointer) ZeroCondition(field string) string {
+	return fmt.Sprintf("%s == nil", field)
+}
+
 type Array struct {
 	Kinder
 }
@@ -172,6 +187,31 @@ func (m Map) String() string {
 
 func (Map) ZeroCondition(field string) string {
 	return fmt.Sprintf("len(%s) == 0", field)
+}
+
+type Interface struct {
+	Pck  string
+	Type string
+}
+
+func (b Interface) Name() string {
+	if b.Pck == "" && b.Type == "" {
+		return "interface{}"
+	}
+
+	if b.Pck != "" {
+		return b.Pck + "." + b.Type
+	}
+
+	return b.Type
+}
+
+func (b Interface) String() string {
+	return b.Name()
+}
+
+func (b Interface) ZeroCondition(field string) string {
+	return fmt.Sprintf("%s == nil", field)
 }
 
 type Tag struct {
