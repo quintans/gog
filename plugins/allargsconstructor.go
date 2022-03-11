@@ -63,4 +63,18 @@ func (c *AllArgsConstructor) WriteBody(mapper generator.Struct, _ AllArgsConstru
 		c.BPrintf(", nil")
 	}
 	c.BPrintf("\n}\n")
+
+	if hasError {
+		c.BPrintf("\nfunc MustNew%s(\n%s) %s {\n", structName, args, structName)
+		c.BPrintf("  %s, err := New%s(\n", receiver, structName)
+		for _, field := range mapper.Fields {
+			c.BPrintf("%s,\n", generator.UncapFirst(field.NameOrKindName()))
+		}
+		c.BPrintf(")\n")
+		c.BPrintf("  if err != nil {\n")
+		c.BPrintf("    panic(err)\n")
+		c.BPrintf("  }\n")
+		c.BPrintf("  return %s\n", receiver)
+		c.BPrintf("}\n")
+	}
 }

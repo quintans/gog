@@ -77,6 +77,20 @@ func NewFoo(
 
 	return f, nil
 }
+
+func MustNewFoo(
+	name string,
+	value int64,
+) Foo {
+	f, err := NewFoo(
+		name,
+		value,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
 `, config.Version),
 		},
 		{
@@ -118,6 +132,20 @@ func NewFoo(
 	}
 
 	return f, nil
+}
+
+func MustNewFoo(
+	name string,
+	value int64,
+) Foo {
+	f, err := NewFoo(
+		name,
+		value,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return f
 }
 `, config.Version),
 		},
