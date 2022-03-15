@@ -29,7 +29,7 @@ func PrintZeroCheck(s *generator.Scribler, mapper generator.Struct, receiver str
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
 			checked = true
-			s.BPrintf("  if %s%s {\n", receiver, field.Kind.ZeroCondition(field.NameForField()))
+			s.BPrintf("  if %s {\n", field.Kind.ZeroCondition(receiver+field.NameForField()))
 			s.BPrintf("    return %s{}, errors.New(\"%s.%s cannot be empty\")\n", structName, structName, field.Name)
 			s.BPrintf("  }\n")
 		}

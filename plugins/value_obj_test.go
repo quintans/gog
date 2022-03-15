@@ -77,7 +77,10 @@ func (f Foo) WithAge(age int) Foo {
 }
 
 func (f Foo) IsZero() bool {
-	return f == Foo{}
+	return f.name == "" ||
+		len(f.value) == 0 ||
+		len(f.pairs) == 0 ||
+		f.age == 0
 }
 
 func (f Foo) String() string {

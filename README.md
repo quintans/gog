@@ -120,7 +120,10 @@ field comments:
 ### gog:record
 generates the same as `allArgsConstructor` and `getters` with the additional methods `IsZero() bool` and `String() string`. 
 
-If `IsZero() bool` and `String() string` are already defined they will not be generated.
+If any of the methods already exist in the initial struct declaration, like `IsZero() bool`, `String() string` they will not be generated.
+
+if the unexported method `validate` of the strut is present it will additionally call it as part of the build call.
+The signature is assumed to be `validate() error` 
 
 ### gog:builder
 generates a builder function for the annotated struct.

@@ -27,7 +27,9 @@ import (
 type Foo struct {
 	Bar
 	// gog:@required
-	name    string
+	name string
+	// gog:@required
+	when    time.Time
 	timeout time.Duration
 }
 
@@ -54,12 +56,14 @@ import (
 type FooBuilder struct {
 	Bar
 	name    string
+	when    time.Time
 	timeout time.Duration
 }
 
-func NewFooBuilder(name string) *FooBuilder {
+func NewFooBuilder(name string, when time.Time) *FooBuilder {
 	return &FooBuilder{
 		name: name,
+		when: when,
 	}
 }
 
@@ -73,6 +77,11 @@ func (b *FooBuilder) Name(name string) *FooBuilder {
 	return b
 }
 
+func (b *FooBuilder) When(when time.Time) *FooBuilder {
+	b.when = when
+	return b
+}
+
 func (b *FooBuilder) Timeout(timeout time.Duration) *FooBuilder {
 	b.timeout = timeout
 	return b
@@ -82,9 +91,13 @@ func (b *FooBuilder) Build() (Foo, error) {
 	if b.name == "" {
 		return Foo{}, errors.New("Foo.name cannot be empty")
 	}
+	if (b.when == time.Time{}) {
+		return Foo{}, errors.New("Foo.when cannot be empty")
+	}
 	s := Foo{
 		Bar:     b.Bar,
 		name:    b.name,
+		when:    b.when,
 		timeout: b.timeout,
 	}
 
@@ -99,6 +112,7 @@ func (b *Foo) ToBuild() *FooBuilder {
 	return &FooBuilder{
 		Bar:     b.Bar,
 		name:    b.name,
+		when:    b.when,
 		timeout: b.timeout,
 	}
 }
@@ -111,6 +125,10 @@ func (f Foo) Name() string {
 	return f.name
 }
 
+func (f Foo) When() time.Time {
+	return f.when
+}
+
 func (f Foo) Timeout() time.Duration {
 	return f.timeout
 }
@@ -120,7 +138,7 @@ func (f Foo) IsZero() bool {
 }
 
 func (f Foo) String() string {
-	return fmt.Sprintf("Foo{Bar: %%+v, name: %%+v, timeout: %%+v}", f.Bar, f.name, f.timeout)
+	return fmt.Sprintf("Foo{Bar: %%+v, name: %%+v, when: %%+v, timeout: %%+v}", f.Bar, f.name, f.when, f.timeout)
 }
 `, config.Version),
 		},
