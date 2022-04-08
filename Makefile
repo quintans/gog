@@ -5,4 +5,4 @@ test:
 
 .PHONY: install
 install:
-	go install ./cmd/gog
+	go install .

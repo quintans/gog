@@ -10,7 +10,7 @@ generates:
 * Record - `gog:record`
 
 ## Instalation
-`go install github.com/quintans/gog/cmd/gog`
+`go install github.com/quintans/gog@latest`
 
 ## Quick Start
 Comment your struct, with the generator tag `// gog:record` and then execute `go generate ./...`.
