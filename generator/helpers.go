@@ -15,3 +15,14 @@ func MergeMaps(m map[string]string, m2 map[string]string) {
 		m[k] = v
 	}
 }
+
+func JoinAround(strs []string, left, right, separator string) string {
+	s := Scribler{}
+	for k, v := range strs {
+		if k > 0 {
+			s.BPrint(separator)
+		}
+		s.BPrint(left, v, right)
+	}
+	return s.String()
+}

@@ -282,6 +282,7 @@ func (p *Parser) funcDecl(node ast.Node) bool {
 				// add to the list of methods
 				m := parseType(fn.Type).(Method)
 				method := Method{
+					Tags:     extractTagsFromDoc(fn.Doc),
 					FuncName: fn.Name.Name,
 					Args:     m.Args,
 					Results:  m.Results,
@@ -409,8 +410,26 @@ func (s *Scribler) HPrintf(format string, args ...interface{}) {
 	fmt.Fprintf(&s.Header, format, args...)
 }
 
+func (s *Scribler) HPrint(args ...interface{}) {
+	fmt.Fprint(&s.Header, args...)
+}
+
+func (s *Scribler) HPrintln(args ...interface{}) {
+	fmt.Fprint(&s.Header, args...)
+	fmt.Fprint(&s.Header, "\n")
+}
+
 func (s *Scribler) BPrintf(format string, args ...interface{}) {
 	fmt.Fprintf(&s.Body, format, args...)
+}
+
+func (s *Scribler) BPrint(args ...interface{}) {
+	fmt.Fprint(&s.Body, args...)
+}
+
+func (s *Scribler) BPrintln(args ...interface{}) {
+	fmt.Fprint(&s.Body, args...)
+	fmt.Fprint(&s.Body, "\n")
 }
 
 func (s *Scribler) Flush() []byte {

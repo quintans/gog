@@ -23,6 +23,7 @@ func (s Struct) FindMethod(name string) (Method, bool) {
 }
 
 type Method struct {
+	Tags
 	FuncName string
 	Args     []Field
 	Results  []Field
@@ -33,25 +34,89 @@ func (m Method) Name() string {
 }
 
 func (m Method) String() string {
-	var s strings.Builder
+	s := &Scribler{}
 	if m.FuncName != "" {
-		s.WriteString(m.FuncName + " ")
+		s.BPrint(m.FuncName, " ")
 	}
-	s.WriteString("func(")
-	for _, v := range m.Args {
-		s.WriteString(v.String() + ",")
-	}
-	s.WriteString(") (")
-	for _, v := range m.Results {
-		s.WriteString(v.String() + ",")
-	}
-	s.WriteString(")")
+	s.BPrint("func")
+	s.BPrint("(", m.Parameters(false), ")")
+	s.BPrint(" ")
+	s.BPrint("(", m.Returns(), ")")
 
 	return s.String()
 }
 
+func (m Method) HasResults() bool {
+	return len(m.Results) > 0
+}
+
+func (m Method) Signature(withName bool) string {
+	s := &Scribler{}
+	if withName && m.FuncName != "" {
+		s.BPrint(m.FuncName)
+	}
+	s.BPrint("(", m.Parameters(false), ")")
+	s.BPrint(" ")
+	s.BPrint("(", m.Returns(), ")")
+
+	return s.String()
+}
+
+func (m Method) Call(withName bool) string {
+	s := &Scribler{}
+	if withName && m.FuncName != "" {
+		s.BPrint(m.FuncName)
+	}
+	s.BPrint("(", m.Parameters(false), ")")
+	s.BPrint(" ")
+	s.BPrint("(", m.Returns(), ")")
+
+	return s.String()
+}
+
+func (m Method) Parameters(onlyName bool) string {
+	args := make([]string, len(m.Args))
+	if onlyName {
+		for k, v := range m.Args {
+			args[k] = v.Name
+		}
+	} else {
+		for k, v := range m.Args {
+			args[k] = v.String()
+		}
+	}
+
+	return strings.Join(args, ",")
+}
+
+func (m Method) Returns() string {
+	res := make([]string, len(m.Results))
+	for k, v := range m.Results {
+		res[k] = v.String()
+	}
+
+	return strings.Join(res, ",")
+}
+
+func (m Method) ReturnZerosWithError(errVar string) string {
+	res := make([]string, len(m.Results))
+	for k, v := range m.Results {
+		if v.IsError() {
+			res[k] = errVar
+		} else {
+			res[k] = v.Kind.Zero()
+		}
+	}
+
+	return strings.Join(res, ",")
+}
+
 func (Method) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
+}
+
+func (m Method) Zero() string {
+	return "nil"
 }
 
 type Field struct {
@@ -90,12 +155,17 @@ func (f Field) IsPrimitive() bool {
 	return ok
 }
 
+func (f Field) IsError() bool {
+	return f.Kind.Name() == "error"
+}
+
 type TypeEnum int
 
 type Kinder interface {
 	Name() string
 	String() string
 	ZeroCondition(string) string
+	Zero() string
 }
 
 type Basic struct {
@@ -119,6 +189,13 @@ func (b Basic) ZeroCondition(field string) string {
 		return fmt.Sprintf("%s == %s", field, zero)
 	}
 	return fmt.Sprintf("(%s == %s{})", field, b.String())
+}
+
+func (b Basic) Zero() string {
+	if zero, ok := zeros[b.Name()]; ok {
+		return zero
+	}
+	return fmt.Sprintf("%s{}", b.String())
 }
 
 func Zero(typ string) (string, bool) {
@@ -160,6 +237,10 @@ func (Pointer) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
 }
 
+func (b Pointer) Zero() string {
+	return "nil"
+}
+
 type Array struct {
 	Kinder
 }
@@ -170,6 +251,10 @@ func (a Array) String() string {
 
 func (Array) ZeroCondition(field string) string {
 	return fmt.Sprintf("len(%s) == 0", field)
+}
+
+func (b Array) Zero() string {
+	return "nil"
 }
 
 type Map struct {
@@ -187,6 +272,10 @@ func (m Map) String() string {
 
 func (Map) ZeroCondition(field string) string {
 	return fmt.Sprintf("len(%s) == 0", field)
+}
+
+func (b Map) Zero() string {
+	return "nil"
 }
 
 type Interface struct {
@@ -212,6 +301,10 @@ func (b Interface) String() string {
 
 func (b Interface) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
+}
+
+func (b Interface) Zero() string {
+	return "nil"
 }
 
 type Tag struct {

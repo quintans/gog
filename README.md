@@ -96,6 +96,8 @@ func (f Foo) String() string {
 
 (see the tests in package `plugins` for more examples)
 
+> it is also possible to extend this use aspects as seen in [here](./plugins/aspect_plugin_test.go)
+
 ## Guide
 
 ### gog:allArgsConstructor
