@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/quintans/gog/generator"
@@ -20,20 +21,23 @@ func (b *Builder) Name() string {
 	return "builder"
 }
 
-func (b *Builder) Imports(mapper generator.Struct) map[string]string {
+func (b *Builder) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Builder) GenerateBody(mapper generator.Struct) error {
+func (b *Builder) GenerateBody(mapper *generator.Struct) error {
 	return b.WriteBody(mapper, BuilderOptions{})
 }
 
-func (b *Builder) WriteBody(mapper generator.Struct, _ BuilderOptions) error {
+func (b *Builder) WriteBody(mapper *generator.Struct, _ BuilderOptions) error {
 	b.genStructAndNew(mapper)
 	b.genBuilderSetters(mapper)
 	b.genBuild(mapper)
 	b.genToBuild(mapper)
-	b.genGetters(mapper)
+	err := b.genGetters(mapper)
+	if err != nil {
+		return fmt.Errorf("generating Builder getters: %w", err)
+	}
 
 	_ = PrintIsZero(&b.Scribler, mapper)
 	_ = PrintString(&b.Scribler, mapper)
@@ -41,7 +45,7 @@ func (b *Builder) WriteBody(mapper generator.Struct, _ BuilderOptions) error {
 	return nil
 }
 
-func (b *Builder) genStructAndNew(mapper generator.Struct) {
+func (b *Builder) genStructAndNew(mapper *generator.Struct) {
 	structName := mapper.Name
 	b.BPrintf("\ntype %sBuilder struct {\n", structName)
 	for _, field := range mapper.Fields {
@@ -61,7 +65,7 @@ func (b *Builder) genStructAndNew(mapper generator.Struct) {
 	b.BPrintf("\nfunc New%sBuilder(%s) *%sBuilder {\n return &%sBuilder{\n%s} \n}\n", structName, args, structName, structName, props)
 }
 
-func (b *Builder) genBuilderSetters(mapper generator.Struct) {
+func (b *Builder) genBuilderSetters(mapper *generator.Struct) {
 	for _, field := range mapper.Fields {
 		builderFieldName := field.NameForField()
 		fieldName := field.NameOrKindName()
@@ -77,7 +81,7 @@ func (b *Builder) genBuilderSetters(mapper generator.Struct) {
 	}
 }
 
-func (b *Builder) genBuild(mapper generator.Struct) {
+func (b *Builder) genBuild(mapper *generator.Struct) {
 	s := &generator.Scribler{}
 	hasError := PrintZeroCheck(s, mapper, "b")
 
@@ -103,7 +107,7 @@ func (b *Builder) genBuild(mapper generator.Struct) {
 	b.BPrintf("\n}\n")
 }
 
-func (b *Builder) genToBuild(mapper generator.Struct) {
+func (b *Builder) genToBuild(mapper *generator.Struct) {
 	structName := mapper.Name
 	b.BPrintf("\n\nfunc (b *%s) ToBuild() *%sBuilder {", structName, structName)
 	b.BPrintf("\nreturn &%sBuilder{\n", structName)
@@ -114,9 +118,13 @@ func (b *Builder) genToBuild(mapper generator.Struct) {
 	b.BPrintf("}\n}\n")
 }
 
-func (b *Builder) genGetters(mapper generator.Struct) {
+func (b *Builder) genGetters(mapper *generator.Struct) error {
 	getters := Getters{}
-	getters.WriteBody(mapper, GetterOptions{})
+	err := getters.WriteBody(mapper, GetterOptions{})
+	if err != nil {
+		return fmt.Errorf("writing Builder body: %w", err)
+	}
 	b.BPrintf("\n")
 	b.Body.Write(getters.Body.Bytes())
+	return nil
 }

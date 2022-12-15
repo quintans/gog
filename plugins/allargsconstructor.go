@@ -14,20 +14,20 @@ type AllArgsConstructor struct {
 	generator.Scribler
 }
 
-func (s AllArgsConstructor) Name() string {
+func (c AllArgsConstructor) Name() string {
 	return "allArgsConstructor"
 }
 
-func (s AllArgsConstructor) Imports(mapper generator.Struct) map[string]string {
+func (c AllArgsConstructor) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (s *AllArgsConstructor) GenerateBody(mapper generator.Struct) error {
-	s.WriteBody(mapper, AllArgsConstructorOptions{})
+func (c *AllArgsConstructor) GenerateBody(mapper *generator.Struct) error {
+	c.WriteBody(mapper, AllArgsConstructorOptions{})
 	return nil
 }
 
-func (c *AllArgsConstructor) WriteBody(mapper generator.Struct, _ AllArgsConstructorOptions) {
+func (c *AllArgsConstructor) WriteBody(mapper *generator.Struct, _ AllArgsConstructorOptions) {
 	args := &generator.Scribler{}
 	hasError := false
 	for _, field := range mapper.Fields {

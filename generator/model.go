@@ -13,7 +13,7 @@ type Struct struct {
 	Methods []Method
 }
 
-func (s Struct) FindMethod(name string) (Method, bool) {
+func (s *Struct) FindMethod(name string) (Method, bool) {
 	for _, m := range s.Methods {
 		if name == m.Name() {
 			return m, true
@@ -29,11 +29,11 @@ type Method struct {
 	Results  []Field
 }
 
-func (m Method) Name() string {
+func (m *Method) Name() string {
 	return m.FuncName
 }
 
-func (m Method) String() string {
+func (m *Method) String() string {
 	s := &Scribler{}
 	if m.FuncName != "" {
 		s.BPrint(m.FuncName, " ")
@@ -46,11 +46,11 @@ func (m Method) String() string {
 	return s.String()
 }
 
-func (m Method) HasResults() bool {
+func (m *Method) HasResults() bool {
 	return len(m.Results) > 0
 }
 
-func (m Method) Signature(withName bool) string {
+func (m *Method) Signature(withName bool) string {
 	s := &Scribler{}
 	if withName && m.FuncName != "" {
 		s.BPrint(m.FuncName)
@@ -62,7 +62,7 @@ func (m Method) Signature(withName bool) string {
 	return s.String()
 }
 
-func (m Method) Call(withName bool) string {
+func (m *Method) Call(withName bool) string {
 	s := &Scribler{}
 	if withName && m.FuncName != "" {
 		s.BPrint(m.FuncName)
@@ -74,7 +74,7 @@ func (m Method) Call(withName bool) string {
 	return s.String()
 }
 
-func (m Method) Parameters(onlyName bool) string {
+func (m *Method) Parameters(onlyName bool) string {
 	args := make([]string, len(m.Args))
 	if onlyName {
 		for k, v := range m.Args {
@@ -89,7 +89,7 @@ func (m Method) Parameters(onlyName bool) string {
 	return strings.Join(args, ",")
 }
 
-func (m Method) Returns() string {
+func (m *Method) Returns() string {
 	res := make([]string, len(m.Results))
 	for k, v := range m.Results {
 		res[k] = v.String()
@@ -98,7 +98,7 @@ func (m Method) Returns() string {
 	return strings.Join(res, ",")
 }
 
-func (m Method) ReturnZerosWithError(errVar string) string {
+func (m *Method) ReturnZerosWithError(errVar string) string {
 	res := make([]string, len(m.Results))
 	for k, v := range m.Results {
 		if v.IsError() {
@@ -115,11 +115,11 @@ func (Method) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
 }
 
-func (m Method) Zero() string {
+func (Method) Zero() string {
 	return "nil"
 }
 
-func (m Method) ContextArgName() string {
+func (m *Method) ContextArgName() string {
 	for _, a := range m.Args {
 		if a.IsContext() {
 			return a.Name

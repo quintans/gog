@@ -9,7 +9,7 @@ import (
 	"github.com/quintans/gog/generator"
 )
 
-func run(t *testing.T, in string, want string) {
+func run(t *testing.T, in, want string) {
 	t.Helper()
 
 	fset := token.NewFileSet() // positions are relative to fset

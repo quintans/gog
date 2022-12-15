@@ -9,7 +9,7 @@ const (
 	WitherTag          = "@wither"
 )
 
-func PrintValidate(s *generator.Scribler, mapper generator.Struct, receiver string) bool {
+func PrintValidate(s *generator.Scribler, mapper *generator.Struct, receiver string) bool {
 	_, ok := mapper.FindMethod(ValidateMethodName)
 	if ok {
 		structName := mapper.Name
@@ -20,7 +20,7 @@ func PrintValidate(s *generator.Scribler, mapper generator.Struct, receiver stri
 	return ok
 }
 
-func PrintZeroCheck(s *generator.Scribler, mapper generator.Struct, receiver string) bool {
+func PrintZeroCheck(s *generator.Scribler, mapper *generator.Struct, receiver string) bool {
 	if receiver != "" {
 		receiver += "."
 	}
@@ -37,7 +37,7 @@ func PrintZeroCheck(s *generator.Scribler, mapper generator.Struct, receiver str
 	return checked
 }
 
-func PrintIsZero(s *generator.Scribler, mapper generator.Struct) bool {
+func PrintIsZero(s *generator.Scribler, mapper *generator.Struct) bool {
 	structName := mapper.Name
 	if _, ok := mapper.FindMethod("IsZero"); ok {
 		return false
@@ -45,14 +45,14 @@ func PrintIsZero(s *generator.Scribler, mapper generator.Struct) bool {
 
 	receiver := generator.UncapFirstSingle(structName)
 	s.BPrintf("\nfunc (%s %s) IsZero() bool {\n", receiver, structName)
-	comparable := true
+	comp := true
 	for _, f := range mapper.Fields {
 		_, basic := f.Kind.(generator.Basic)
 		if !basic {
-			comparable = false
+			comp = false
 		}
 	}
-	if comparable {
+	if comp {
 		s.BPrintf("  return %s == %s{}\n", receiver, structName)
 	} else {
 		last := len(mapper.Fields) - 1
@@ -69,7 +69,7 @@ func PrintIsZero(s *generator.Scribler, mapper generator.Struct) bool {
 	return true
 }
 
-func PrintString(s *generator.Scribler, mapper generator.Struct) bool {
+func PrintString(s *generator.Scribler, mapper *generator.Struct) bool {
 	structName := mapper.Name
 	if _, ok := mapper.FindMethod("String"); ok {
 		return false

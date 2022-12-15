@@ -1,6 +1,8 @@
 package plugins
 
 import (
+	"fmt"
+
 	"github.com/quintans/gog/generator"
 )
 
@@ -19,23 +21,26 @@ type Record struct {
 
 type RecordOptions struct{}
 
-func (s Record) Name() string {
+func (s *Record) Name() string {
 	return "record"
 }
 
-func (s Record) Imports(mapper generator.Struct) map[string]string {
+func (s *Record) Imports(mapper *generator.Struct) map[string]string {
 	m := s.allArgs.Imports(mapper)
 	generator.MergeMaps(m, s.getters.Imports(mapper))
 	return m
 }
 
-func (s *Record) GenerateBody(mapper generator.Struct) error {
+func (s *Record) GenerateBody(mapper *generator.Struct) error {
 	return s.WriteBody(mapper, RecordOptions{})
 }
 
-func (s *Record) WriteBody(mapper generator.Struct, _ RecordOptions) error {
+func (s *Record) WriteBody(mapper *generator.Struct, _ RecordOptions) error {
 	s.allArgs.WriteBody(mapper, AllArgsConstructorOptions{})
-	s.getters.WriteBody(mapper, GetterOptions{})
+	err := s.getters.WriteBody(mapper, GetterOptions{})
+	if err != nil {
+		return fmt.Errorf("writing Record body: %w", err)
+	}
 
 	s.Body.Write(s.allArgs.Flush())
 	s.Body.Write(s.getters.Flush())

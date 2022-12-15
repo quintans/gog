@@ -16,11 +16,11 @@ func (b *RequiredArgsConstructor) Name() string {
 	return "requiredArgsConstructor"
 }
 
-func (b *RequiredArgsConstructor) Imports(mapper generator.Struct) map[string]string {
+func (b *RequiredArgsConstructor) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (s *RequiredArgsConstructor) GenerateBody(mapper generator.Struct) error {
+func (b *RequiredArgsConstructor) GenerateBody(mapper *generator.Struct) error {
 	args := &generator.Scribler{}
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
@@ -29,16 +29,16 @@ func (s *RequiredArgsConstructor) GenerateBody(mapper generator.Struct) error {
 	}
 
 	structName := mapper.Name
-	s.BPrintf("\nfunc New%sRequired(%s) %s {\n", structName, args, structName)
-	s.BPrintf(" return %s{\n", structName)
+	b.BPrintf("\nfunc New%sRequired(%s) %s {\n", structName, args, structName)
+	b.BPrintf(" return %s{\n", structName)
 	for _, field := range mapper.Fields {
 		if field.HasTag(RequiredTag) {
 			fieldName := field.NameOrKindName()
-			s.BPrintf("	%s: %s,\n", fieldName, generator.UncapFirst(fieldName))
+			b.BPrintf("	%s: %s,\n", fieldName, generator.UncapFirst(fieldName))
 		}
 	}
-	s.BPrintf("  }\n")
-	s.BPrintf("}\n")
+	b.BPrintf("  }\n")
+	b.BPrintf("}\n")
 
 	return nil
 }

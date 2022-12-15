@@ -18,22 +18,24 @@ func (b *Options) Name() string {
 	return "options"
 }
 
-func (b *Options) Imports(mapper generator.Struct) map[string]string {
+func (b *Options) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Options) GenerateBody(mapper generator.Struct) error {
+func (b *Options) GenerateBody(mapper *generator.Struct) error {
 	for _, field := range mapper.Fields {
-		if !field.HasTag(RequiredTag) && !field.HasTag(IgnoreTag) {
-			fieldName := field.NameOrKindName()
-			optionFunc := mapper.Name + strings.Title(fieldName)
-			arg := generator.UncapFirst(fieldName)
-			b.BPrintf("func %s(%s %s) func(*%s) {\n", optionFunc, arg, field.Kind.String(), mapper.Name)
-			b.BPrintf("	return func(t *%s) {\n", mapper.Name)
-			b.BPrintf("		t.%s = %s\n", fieldName, arg)
-			b.BPrintf("	}\n")
-			b.BPrintf("}\n\n")
+		if field.HasTag(RequiredTag) || field.HasTag(IgnoreTag) {
+			continue
 		}
+
+		fieldName := field.NameOrKindName()
+		optionFunc := mapper.Name + strings.Title(fieldName)
+		arg := generator.UncapFirst(fieldName)
+		b.BPrintf("func %s(%s %s) func(*%s) {\n", optionFunc, arg, field.Kind.String(), mapper.Name)
+		b.BPrintf("	return func(t *%s) {\n", mapper.Name)
+		b.BPrintf("		t.%s = %s\n", fieldName, arg)
+		b.BPrintf("	}\n")
+		b.BPrintf("}\n\n")
 	}
 
 	args := &generator.Scribler{}

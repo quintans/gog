@@ -130,15 +130,15 @@ func (a Aspect) Name() string {
 	return "aspect"
 }
 
-func (a Aspect) Imports(mapper generator.Struct) map[string]string {
+func (a Aspect) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (a *Aspect) GenerateBody(mapper generator.Struct) error {
+func (a *Aspect) GenerateBody(mapper *generator.Struct) error {
 	return a.WriteBody(mapper, AspectOptions{})
 }
 
-func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
+func (a *Aspect) WriteBody(mapper *generator.Struct, _ AspectOptions) error {
 	sName := mapper.Name + "Aspect"
 	a.BPrintf("type %sAspect struct {\n", mapper.Name)
 	a.BPrintf("Next %s\n", mapper.Name)
@@ -152,8 +152,10 @@ func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
 		tags := m.Tags.Filter(AspectTxTag, AspectMonitorTag, AspectSecuredTag)
 
 		for k := len(tags) - 1; k >= 0; k-- {
-			var err error
-			var body string
+			var (
+				err  error
+				body string
+			)
 
 			tag := m.Tags[k]
 			switch tag.Name {
@@ -163,20 +165,20 @@ func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
 				if err := tag.Unmarshal(&options); err != nil {
 					return err
 				}
-				body = monitor(m, methodName, options)
+				body = monitor(&m, methodName, options)
 			case AspectTxTag:
 				a.BPrintln("// transactional aspect")
-				body, err = transactional(m, methodName)
+				body, err = transactional(&m, methodName)
 				if err != nil {
 					return err
 				}
 			case AspectSecuredTag:
 				a.BPrintln("// secured aspect")
 				options := AspectSecuredOptions{}
-				if err := tag.Unmarshal(&options); err != nil {
+				if err = tag.Unmarshal(&options); err != nil {
 					return err
 				}
-				body, err = secured(m, methodName, options)
+				body, err = secured(&m, methodName, options)
 				if err != nil {
 					return err
 				}
@@ -207,7 +209,7 @@ type AspectSecuredOptions struct {
 	Roles []string
 }
 
-func monitor(m generator.Method, methodName string, options AspectMonitorOptions) string {
+func monitor(m *generator.Method, methodName string, options AspectMonitorOptions) string {
 	sign := m.Signature(false)
 	s := generator.Scribler{}
 	s.BPrintf(`func%s{
@@ -227,7 +229,7 @@ func monitor(m generator.Method, methodName string, options AspectMonitorOptions
 	return s.String()
 }
 
-func secured(m generator.Method, methodName string, options AspectSecuredOptions) (string, error) {
+func secured(m *generator.Method, methodName string, options AspectSecuredOptions) (string, error) {
 	ctxName := m.ContextArgName()
 	if ctxName == "" {
 		return "", fmt.Errorf("method %s must have a context.Context argument type to use the 'secured' aspect", m.Name())
@@ -246,7 +248,7 @@ func secured(m generator.Method, methodName string, options AspectSecuredOptions
 	return s.String(), nil
 }
 
-func transactional(m generator.Method, methodName string) (string, error) {
+func transactional(m *generator.Method, methodName string) (string, error) {
 	sign := m.Signature(false)
 	s := generator.Scribler{}
 	s.BPrintf("func%s{\n", sign)

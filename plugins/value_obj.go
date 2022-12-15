@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/quintans/gog/generator"
@@ -18,17 +19,20 @@ func (b *ValueObj) Name() string {
 	return "value"
 }
 
-func (b *ValueObj) Imports(mapper generator.Struct) map[string]string {
+func (b *ValueObj) Imports(mapper *generator.Struct) map[string]string {
 	return map[string]string{}
 }
 
-func (b *ValueObj) GenerateBody(mapper generator.Struct) error {
+func (b *ValueObj) GenerateBody(mapper *generator.Struct) error {
 	allArgs := &AllArgsConstructor{}
 	allArgs.WriteBody(mapper, AllArgsConstructorOptions{})
 	b.Body.Write(allArgs.Flush())
 
 	getters := Getters{}
-	getters.WriteBody(mapper, GetterOptions{})
+	err := getters.WriteBody(mapper, GetterOptions{})
+	if err != nil {
+		return fmt.Errorf("writing ValueObj body: %w", err)
+	}
 	b.BPrintf("\n")
 	b.Body.Write(getters.Body.Bytes())
 
@@ -44,7 +48,7 @@ func (b *ValueObj) GenerateBody(mapper generator.Struct) error {
 	return nil
 }
 
-func (b *ValueObj) genWither(mapper generator.Struct, field generator.Field) {
+func (b *ValueObj) genWither(mapper *generator.Struct, field generator.Field) {
 	fieldName := field.NameOrKindName()
 	receiver := generator.UncapFirstSingle(mapper.Name)
 	wither := "With" + strings.Title(fieldName)
