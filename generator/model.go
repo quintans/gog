@@ -119,6 +119,15 @@ func (m Method) Zero() string {
 	return "nil"
 }
 
+func (m Method) ContextArgName() string {
+	for _, a := range m.Args {
+		if a.IsContext() {
+			return a.Name
+		}
+	}
+	return ""
+}
+
 type Field struct {
 	Tags
 	Name string
@@ -157,6 +166,10 @@ func (f Field) IsPrimitive() bool {
 
 func (f Field) IsError() bool {
 	return f.Kind.Name() == "error"
+}
+
+func (f Field) IsContext() bool {
+	return f.Kind.Name() == "context.Context"
 }
 
 type TypeEnum int
@@ -237,7 +250,7 @@ func (Pointer) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
 }
 
-func (b Pointer) Zero() string {
+func (p Pointer) Zero() string {
 	return "nil"
 }
 
@@ -253,7 +266,7 @@ func (Array) ZeroCondition(field string) string {
 	return fmt.Sprintf("len(%s) == 0", field)
 }
 
-func (b Array) Zero() string {
+func (a Array) Zero() string {
 	return "nil"
 }
 
@@ -274,7 +287,7 @@ func (Map) ZeroCondition(field string) string {
 	return fmt.Sprintf("len(%s) == 0", field)
 }
 
-func (b Map) Zero() string {
+func (m Map) Zero() string {
 	return "nil"
 }
 
@@ -337,4 +350,18 @@ func (t Tags) FindTag(tag string) (Tag, bool) {
 		}
 	}
 	return Tag{}, false
+}
+
+func (t Tags) Filter(filter ...string) []Tag {
+	var tags []Tag
+
+	for _, t := range t {
+		for _, f := range filter {
+			if t.Name == f {
+				tags = append(tags, t)
+			}
+		}
+	}
+
+	return tags
 }

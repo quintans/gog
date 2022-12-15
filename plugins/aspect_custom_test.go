@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	AspectTxTag      = "@tx"
+	AspectTxTag      = "@transactional"
 	AspectMonitorTag = "@monitor"
 	AspectSecuredTag = "@secured"
 )
@@ -36,7 +36,7 @@ func TestCustomPlugin(t *testing.T) {
 			type Foo struct{}
 			
 			// gog:@monitor {"threshold": 1}
-			// gog:@tx
+			// gog:@transactional
 			func (f Foo) Handle(ctx context.Context, code string) (int, error) {
 				fmt.Println("receive code:", code)
 				return 1, nil
@@ -70,15 +70,14 @@ type FooAspect struct {
 }
 
 func (a *FooAspect) Handle(ctx context.Context, code string) (int, error) {
-	// tx aspect
+	// transactional aspect
 	f1 := func(ctx context.Context, code string) (int, error) {
 		var a0 int
 		var a1 error
-		txErr := fake.WithTx(ctx, func(s string) error {
+		a1 = fake.WithTx(ctx, func(s string) error {
 			a0, a1 = a.Next.Handle(ctx, code)
 			return a1
 		}) // end of WithTx
-		a1 = txErr
 		return a0, a1
 	} // end of tx
 
@@ -150,14 +149,15 @@ func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
 
 		methodName := "a.Next." + m.Name()
 
-		var found bool
-		for k := len(m.Tags) - 1; k >= 0; k-- {
+		tags := m.Tags.Filter(AspectTxTag, AspectMonitorTag, AspectSecuredTag)
+
+		for k := len(tags) - 1; k >= 0; k-- {
+			var err error
 			var body string
 
 			tag := m.Tags[k]
 			switch tag.Name {
 			case AspectMonitorTag:
-				found = true
 				a.BPrintln("// monitor aspect")
 				options := AspectMonitorOptions{}
 				if err := tag.Unmarshal(&options); err != nil {
@@ -165,17 +165,21 @@ func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
 				}
 				body = monitor(m, methodName, options)
 			case AspectTxTag:
-				found = true
-				a.BPrintln("// tx aspect")
-				body = tx(m, methodName)
+				a.BPrintln("// transactional aspect")
+				body, err = transactional(m, methodName)
+				if err != nil {
+					return err
+				}
 			case AspectSecuredTag:
-				found = true
 				a.BPrintln("// secured aspect")
 				options := AspectSecuredOptions{}
 				if err := tag.Unmarshal(&options); err != nil {
 					return err
 				}
-				body = secured(m, methodName, options)
+				body, err = secured(m, methodName, options)
+				if err != nil {
+					return err
+				}
 			default:
 				continue
 			}
@@ -184,7 +188,7 @@ func (a *Aspect) WriteBody(mapper generator.Struct, _ AspectOptions) error {
 		}
 
 		call := fmt.Sprint("(", m.Parameters(true), ")")
-		if found {
+		if len(tags) > 0 {
 			a.BPrintln("return f0", call)
 		} else {
 			a.BPrintln("return ", methodName, call)
@@ -223,52 +227,57 @@ func monitor(m generator.Method, methodName string, options AspectMonitorOptions
 	return s.String()
 }
 
-func secured(m generator.Method, methodName string, options AspectSecuredOptions) string {
+func secured(m generator.Method, methodName string, options AspectSecuredOptions) (string, error) {
+	ctxName := m.ContextArgName()
+	if ctxName == "" {
+		return "", fmt.Errorf("method %s must have a context.Context argument type to use the 'secured' aspect", m.Name())
+	}
 	sign := m.Signature(false)
 	s := generator.Scribler{}
 	s.BPrintf(`func%s{
-		if err := checkSecurity(ctx, %s); err != nil {
+		if err := checkSecurity(%s, %s); err != nil {
 			return %s
 		}
-		`, sign, generator.JoinAround(options.Roles, "\"", "\"", ", "), m.ReturnZerosWithError("err"))
+		`, sign, ctxName, generator.JoinAround(options.Roles, "\"", "\"", ", "), m.ReturnZerosWithError("err"))
 
 	s.BPrintln(methodName, "(", m.Parameters(true), ")")
 	s.BPrintln("}")
 
-	return s.String()
+	return s.String(), nil
 }
 
-func tx(m generator.Method, methodName string) string {
+func transactional(m generator.Method, methodName string) (string, error) {
 	sign := m.Signature(false)
 	s := generator.Scribler{}
 	s.BPrintf("func%s{\n", sign)
 
-	// return vars
-	var errorVar string
+	var errVar string
 	rets := make([]string, 0, len(m.Results))
 
 	for k, a := range m.Results {
-		r := fmt.Sprintf("a%d", k)
-		s.BPrintf("var %s %s\n", r, a.Kind)
-		rets = append(rets, r)
+		v := fmt.Sprintf("a%d", k)
+		s.BPrintf("var %s %s\n", v, a.Kind)
+		rets = append(rets, v)
 		if a.IsError() {
-			errorVar = r
+			errVar = v
 		}
 	}
-	s.BPrintln("txErr := fake.WithTx(ctx, func(s string) error {")
+
+	if errVar == "" {
+		return "", fmt.Errorf("method %s must return an error type to use the 'transaction' aspect", m.Name())
+	}
+
+	s.BPrintln(errVar, " = fake.WithTx(ctx, func(s string) error {")
 	s.BPrintln(strings.Join(rets, ","), " = ", methodName, "(", m.Parameters(true), ")")
-	if errorVar != "" {
-		s.BPrintln("return ", errorVar)
+	if errVar != "" {
+		s.BPrintln("return ", errVar)
 	} else {
 		s.BPrintln("return nil")
 	}
 	s.BPrintln("}) // end of WithTx") // ends WithTx
 
-	if errorVar != "" {
-		s.BPrintln(errorVar, " = txErr")
-	}
 	s.BPrintln("return ", strings.Join(rets, ","))
 	s.BPrintln("} // end of tx")
 
-	return s.String()
+	return s.String(), nil
 }
