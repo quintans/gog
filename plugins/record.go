@@ -25,17 +25,21 @@ func (s *Record) Name() string {
 	return "record"
 }
 
-func (s *Record) Imports(mapper *generator.Struct) map[string]string {
+func (*Record) Accepts() []generator.MapperType {
+	return []generator.MapperType{generator.StructMapper}
+}
+
+func (s *Record) Imports(mapper generator.Mapper) map[string]string {
 	m := s.allArgs.Imports(mapper)
 	generator.MergeMaps(m, s.getters.Imports(mapper))
 	return m
 }
 
-func (s *Record) GenerateBody(mapper *generator.Struct) error {
+func (s *Record) GenerateBody(mapper generator.Mapper) error {
 	return s.WriteBody(mapper, RecordOptions{})
 }
 
-func (s *Record) WriteBody(mapper *generator.Struct, _ RecordOptions) error {
+func (s *Record) WriteBody(mapper generator.Mapper, _ RecordOptions) error {
 	s.allArgs.WriteBody(mapper, AllArgsConstructorOptions{})
 	err := s.getters.WriteBody(mapper, GetterOptions{})
 	if err != nil {

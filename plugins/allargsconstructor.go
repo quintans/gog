@@ -18,25 +18,29 @@ func (c AllArgsConstructor) Name() string {
 	return "allArgsConstructor"
 }
 
-func (c AllArgsConstructor) Imports(mapper *generator.Struct) map[string]string {
+func (AllArgsConstructor) Accepts() []generator.MapperType {
+	return []generator.MapperType{generator.StructMapper}
+}
+
+func (c AllArgsConstructor) Imports(mapper generator.Mapper) map[string]string {
 	return map[string]string{}
 }
 
-func (c *AllArgsConstructor) GenerateBody(mapper *generator.Struct) error {
+func (c *AllArgsConstructor) GenerateBody(mapper generator.Mapper) error {
 	c.WriteBody(mapper, AllArgsConstructorOptions{})
 	return nil
 }
 
-func (c *AllArgsConstructor) WriteBody(mapper *generator.Struct, _ AllArgsConstructorOptions) {
+func (c *AllArgsConstructor) WriteBody(mapper generator.Mapper, _ AllArgsConstructorOptions) {
 	args := &generator.Scribler{}
 	hasError := false
-	for _, field := range mapper.Fields {
+	for _, field := range mapper.GetFields() {
 		args.BPrintf("%s %s,\n", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
 		if !hasError && field.HasTag(RequiredTag) {
 			hasError = true
 		}
 	}
-	structName := mapper.Name
+	structName := mapper.GetName()
 	receiver := generator.UncapFirstSingle(structName)
 	s := &generator.Scribler{}
 	if hasError {
@@ -44,7 +48,7 @@ func (c *AllArgsConstructor) WriteBody(mapper *generator.Struct, _ AllArgsConstr
 	}
 
 	s.BPrintf("%s := %s{\n", receiver, structName)
-	for _, field := range mapper.Fields {
+	for _, field := range mapper.GetFields() {
 		fieldName := field.NameOrKindName()
 		s.BPrintf("	%s: %s,\n", fieldName, field.NameForField())
 	}
@@ -67,7 +71,7 @@ func (c *AllArgsConstructor) WriteBody(mapper *generator.Struct, _ AllArgsConstr
 	if hasError {
 		c.BPrintf("\nfunc MustNew%s(\n%s) %s {\n", structName, args, structName)
 		c.BPrintf("  %s, err := New%s(\n", receiver, structName)
-		for _, field := range mapper.Fields {
+		for _, field := range mapper.GetFields() {
 			c.BPrintf("%s,\n", generator.UncapFirst(field.NameOrKindName()))
 		}
 		c.BPrintf(")\n")

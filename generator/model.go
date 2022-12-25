@@ -6,6 +6,25 @@ import (
 	"strings"
 )
 
+const zeroNil = "nil"
+
+type MapperType string
+
+const (
+	StructMapper    MapperType = "struct"
+	InterfaceMapper MapperType = "interface"
+)
+
+type Mapper interface {
+	Type() MapperType
+	GetTags() Tags
+	GetName() string
+	GetFields() []Field
+	GetMethods() []Method
+	AddMethod(Method)
+	FindMethod(name string) (Method, bool)
+}
+
 type Struct struct {
 	Tags
 	Name    string
@@ -13,7 +32,70 @@ type Struct struct {
 	Methods []Method
 }
 
+func (s *Struct) Type() MapperType {
+	return StructMapper
+}
+
+func (s *Struct) GetTags() Tags {
+	return s.Tags
+}
+
+func (s *Struct) GetName() string {
+	return s.Name
+}
+
+func (s *Struct) GetFields() []Field {
+	return s.Fields
+}
+
+func (s *Struct) GetMethods() []Method {
+	return s.Methods
+}
+
+func (s *Struct) AddMethod(m Method) {
+	s.Methods = append(s.Methods, m)
+}
+
 func (s *Struct) FindMethod(name string) (Method, bool) {
+	for _, m := range s.Methods {
+		if name == m.Name() {
+			return m, true
+		}
+	}
+	return Method{}, false
+}
+
+type Interface struct {
+	Tags
+	Name    string
+	Methods []Method
+}
+
+func (s *Interface) Type() MapperType {
+	return InterfaceMapper
+}
+
+func (s *Interface) GetTags() Tags {
+	return s.Tags
+}
+
+func (s *Interface) GetName() string {
+	return s.Name
+}
+
+func (s *Interface) GetFields() []Field {
+	return nil
+}
+
+func (s *Interface) GetMethods() []Method {
+	return s.Methods
+}
+
+func (s *Interface) AddMethod(m Method) {
+	s.Methods = append(s.Methods, m)
+}
+
+func (s *Interface) FindMethod(name string) (Method, bool) {
 	for _, m := range s.Methods {
 		if name == m.Name() {
 			return m, true
@@ -27,6 +109,15 @@ type Method struct {
 	FuncName string
 	Args     []Field
 	Results  []Field
+}
+
+func (m *Method) IsExported() bool {
+	if m.FuncName == "" {
+		return false
+	}
+	first := m.FuncName[:1]
+	upper := strings.ToUpper(first)
+	return first == upper
 }
 
 func (m *Method) Name() string {
@@ -116,7 +207,7 @@ func (Method) ZeroCondition(field string) string {
 }
 
 func (Method) Zero() string {
-	return "nil"
+	return zeroNil
 }
 
 func (m *Method) ContextArgName() string {
@@ -229,7 +320,7 @@ var zeros = map[string]string{
 	"uint16":     "0",
 	"uint32":     "0",
 	"uint64":     "0",
-	"uintptr":    "nil",
+	"uintptr":    zeroNil,
 	"byte":       "0",
 	"rune":       "0",
 	"float32":    "0",
@@ -251,7 +342,7 @@ func (Pointer) ZeroCondition(field string) string {
 }
 
 func (p Pointer) Zero() string {
-	return "nil"
+	return zeroNil
 }
 
 type Array struct {
@@ -267,7 +358,7 @@ func (Array) ZeroCondition(field string) string {
 }
 
 func (a Array) Zero() string {
-	return "nil"
+	return zeroNil
 }
 
 type Map struct {
@@ -288,15 +379,17 @@ func (Map) ZeroCondition(field string) string {
 }
 
 func (m Map) Zero() string {
-	return "nil"
+	return zeroNil
 }
 
-type Interface struct {
-	Pck  string
-	Type string
+type InterfaceVar struct {
+	Tags
+	Pck     string
+	Type    string
+	Methods []Method
 }
 
-func (b Interface) Name() string {
+func (b *InterfaceVar) Name() string {
 	if b.Pck == "" && b.Type == "" {
 		return "interface{}"
 	}
@@ -308,16 +401,16 @@ func (b Interface) Name() string {
 	return b.Type
 }
 
-func (b Interface) String() string {
+func (b *InterfaceVar) String() string {
 	return b.Name()
 }
 
-func (b Interface) ZeroCondition(field string) string {
+func (b *InterfaceVar) ZeroCondition(field string) string {
 	return fmt.Sprintf("%s == nil", field)
 }
 
-func (b Interface) Zero() string {
-	return "nil"
+func (b *InterfaceVar) Zero() string {
+	return zeroNil
 }
 
 type Tag struct {

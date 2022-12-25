@@ -23,13 +23,17 @@ func (b *Getters) Name() string {
 	return "getters"
 }
 
-func (b *Getters) Imports(mapper *generator.Struct) map[string]string {
+func (*Getters) Accepts() []generator.MapperType {
+	return []generator.MapperType{generator.StructMapper}
+}
+
+func (b *Getters) Imports(mapper generator.Mapper) map[string]string {
 	return map[string]string{}
 }
 
-func (b *Getters) GenerateBody(mapper *generator.Struct) error {
+func (b *Getters) GenerateBody(mapper generator.Mapper) error {
 	options := GetterOptions{}
-	if tag, ok := mapper.FindTag(b.Name()); ok {
+	if tag, ok := mapper.GetTags().FindTag(b.Name()); ok {
 		if err := tag.Unmarshal(&options); err != nil {
 			return err
 		}
@@ -42,14 +46,14 @@ func (b *Getters) GenerateBody(mapper *generator.Struct) error {
 	return nil
 }
 
-func (b *Getters) WriteBody(mapper *generator.Struct, options GetterOptions) error {
+func (b *Getters) WriteBody(mapper generator.Mapper, options GetterOptions) error {
 	var star string
 	if options.Pointer {
 		star = "*"
 	}
-	structName := mapper.Name
+	structName := mapper.GetName()
 	receiver := generator.UncapFirstSingle(structName)
-	for _, field := range mapper.Fields {
+	for _, field := range mapper.GetFields() {
 		if field.HasTag(IgnoreTag) {
 			continue
 		}

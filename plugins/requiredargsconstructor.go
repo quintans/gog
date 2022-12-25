@@ -16,22 +16,26 @@ func (b *RequiredArgsConstructor) Name() string {
 	return "requiredArgsConstructor"
 }
 
-func (b *RequiredArgsConstructor) Imports(mapper *generator.Struct) map[string]string {
+func (*RequiredArgsConstructor) Accepts() []generator.MapperType {
+	return []generator.MapperType{generator.StructMapper}
+}
+
+func (b *RequiredArgsConstructor) Imports(mapper generator.Mapper) map[string]string {
 	return map[string]string{}
 }
 
-func (b *RequiredArgsConstructor) GenerateBody(mapper *generator.Struct) error {
+func (b *RequiredArgsConstructor) GenerateBody(mapper generator.Mapper) error {
 	args := &generator.Scribler{}
-	for _, field := range mapper.Fields {
+	for _, field := range mapper.GetFields() {
 		if field.HasTag(RequiredTag) {
 			args.BPrintf("%s %s,", generator.UncapFirst(field.NameOrKindName()), field.Kind.String())
 		}
 	}
 
-	structName := mapper.Name
+	structName := mapper.GetName()
 	b.BPrintf("\nfunc New%sRequired(%s) %s {\n", structName, args, structName)
 	b.BPrintf(" return %s{\n", structName)
-	for _, field := range mapper.Fields {
+	for _, field := range mapper.GetFields() {
 		if field.HasTag(RequiredTag) {
 			fieldName := field.NameOrKindName()
 			b.BPrintf("	%s: %s,\n", fieldName, generator.UncapFirst(fieldName))
