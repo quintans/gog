@@ -202,10 +202,6 @@ func (f Foo) String() string {
 	}
 
 	for _, tt := range tests {
-		//! delete me
-		if tt.name != "Record_with_non_primitive" {
-			continue
-		}
 		t.Run(tt.name, func(t *testing.T) {
 			run(t, tt.in, tt.out)
 		})

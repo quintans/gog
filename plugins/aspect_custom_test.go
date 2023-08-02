@@ -76,40 +76,40 @@ type FooAspect struct {
 
 func (a *FooAspect) Handle(ctx context.Context, code string) (int, error) {
 	// transactional aspect
-	f1 := func(ctx context.Context, code string) (int, error) {
-		var a0 int
-		var a1 error
-		a1 = fake.WithTx(ctx, func(s string) error {
-			a0, a1 = a.Next.Handle(ctx, code)
-			return a1
+	fn1 := func(ctx context.Context, code string) (int, error) {
+		var r0 int
+		var r1 error
+		r1 = fake.WithTx(ctx, func(s string) error {
+			r0, r1 = a.Next.Handle(ctx, code)
+			return r1
 		}) // end of WithTx
-		return a0, a1
+		return r0, r1
 	} // end of tx
 
 	// monitor aspect
-	f0 := func(ctx context.Context, code string) (int, error) {
+	fn0 := func(ctx context.Context, code string) (int, error) {
 		now := time.Now()
 		defer func() {
 			if time.Since(now) > 1*time.Second {
 				fmt.Println("slow call")
 			}
 		}()
-		return f1(ctx, code)
+		return fn1(ctx, code)
 	}
 
-	return f0(ctx, code)
+	return fn0(ctx, code)
 }
 
 func (a *FooAspect) WhoAmI(ctx context.Context) (string, error) {
 	// secured aspect
-	f0 := func(ctx context.Context) (string, error) {
+	fn0 := func(ctx context.Context) (string, error) {
 		if err := checkSecurity(ctx, "user"); err != nil {
 			return "", err
 		}
 		a.Next.WhoAmI(ctx)
 	}
 
-	return f0(ctx)
+	return fn0(ctx)
 }
 
 func (a *FooAspect) Dummy(ctx context.Context) int {
@@ -144,27 +144,22 @@ type BarAspect struct {
 
 func (a *BarAspect) Handle(ctx context.Context, code string) (int, error) {
 	// transactional aspect
-	f0 := func(ctx context.Context, code string) (int, error) {
-		var a0 int
-		var a1 error
-		a1 = fake.WithTx(ctx, func(s string) error {
-			a0, a1 = a.Next.Handle(ctx, code)
-			return a1
+	fn0 := func(ctx context.Context, code string) (int, error) {
+		var r0 int
+		var r1 error
+		r1 = fake.WithTx(ctx, func(s string) error {
+			r0, r1 = a.Next.Handle(ctx, code)
+			return r1
 		}) // end of WithTx
-		return a0, a1
+		return r0, r1
 	} // end of tx
 
-	return f0(ctx, code)
+	return fn0(ctx, code)
 }
 `, config.Version),
 		},
 	}
 	for _, tt := range tests {
-		//! delete me
-		if tt.name != "interface_aspect" {
-			continue
-		}
-
 		t.Run(tt.name, func(t *testing.T) {
 			run(t, tt.in, tt.out)
 		})
@@ -245,13 +240,13 @@ func (a *Aspect) WriteBody(mapper generator.Mapper, _ AspectOptions) error {
 				continue
 			}
 			a.BPrintln("// ", tag.Name[1:], " aspect")
-			methodName = fmt.Sprintf("f%d", k)
+			methodName = fmt.Sprintf("fn%d", k)
 			a.BPrint(methodName, " := ", body, "\n")
 		}
 
 		call := fmt.Sprint("(", m.Parameters(true), ")")
 		if len(tags) > 0 {
-			a.BPrintln("return f0", call)
+			a.BPrintln("return fn0", call)
 		} else {
 			a.BPrintln("return ", methodName, call)
 		}
@@ -317,7 +312,7 @@ func transactional(m *generator.Method, methodName string) (string, error) {
 	rets := make([]string, 0, len(m.Results))
 
 	for k, a := range m.Results {
-		v := fmt.Sprintf("a%d", k)
+		v := fmt.Sprintf("r%d", k)
 		s.BPrintf("var %s %s\n", v, a.Kind)
 		rets = append(rets, v)
 		if a.IsError() {
