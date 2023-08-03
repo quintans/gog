@@ -263,6 +263,10 @@ func (f Field) IsContext() bool {
 	return f.Kind.Name() == "context.Context"
 }
 
+func (f Field) IsFunc() bool {
+	return strings.HasPrefix(f.Kind.Name(), "func(")
+}
+
 type TypeEnum int
 
 type Kinder interface {

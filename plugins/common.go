@@ -79,10 +79,16 @@ func PrintString(s *generator.Scribler, mapper generator.Mapper) bool {
 	s.BPrintf("\nfunc (%s %s) String() string {\n", receiver, structName)
 
 	s.BPrintf("  return fmt.Sprintf(\"%s{", structName)
-	for k, field := range mapper.GetFields() {
-		if k > 0 {
+	fieldCount := 0
+	for _, field := range mapper.GetFields() {
+		if field.IsFunc() {
+			continue
+		}
+
+		if fieldCount > 0 {
 			s.BPrintf(", ")
 		}
+		fieldCount++
 		s.BPrintf("%s: %%+v", field.NameOrKindName())
 	}
 	s.BPrintf("}\", ")

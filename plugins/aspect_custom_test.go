@@ -218,8 +218,8 @@ func (a *Aspect) WriteBody(mapper generator.Mapper, _ AspectOptions) error {
 			switch tag.Name {
 			case AspectMonitorTag:
 				options := AspectMonitorOptions{}
-				if err = tag.Unmarshal(&options); err != nil {
-					return err
+				if er := tag.Unmarshal(&options); er != nil {
+					return er
 				}
 				body = monitor(&m, methodName, options)
 			case AspectTxTag:
@@ -229,8 +229,8 @@ func (a *Aspect) WriteBody(mapper generator.Mapper, _ AspectOptions) error {
 				}
 			case AspectSecuredTag:
 				options := AspectSecuredOptions{}
-				if err = tag.Unmarshal(&options); err != nil {
-					return err
+				if er := tag.Unmarshal(&options); er != nil {
+					return er
 				}
 				body, err = secured(&m, methodName, options)
 				if err != nil {
@@ -326,11 +326,7 @@ func transactional(m *generator.Method, methodName string) (string, error) {
 
 	s.BPrintln(errVar, " = fake.WithTx(ctx, func(s string) error {")
 	s.BPrintln(strings.Join(rets, ","), " = ", methodName, "(", m.Parameters(true), ")")
-	if errVar != "" {
-		s.BPrintln("return ", errVar)
-	} else {
-		s.BPrintln("return nil")
-	}
+	s.BPrintln("return ", errVar)
 	s.BPrintln("}) // end of WithTx") // ends WithTx
 
 	s.BPrintln("return ", strings.Join(rets, ","))
