@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,7 +22,15 @@ const (
 	goTestFilesExt = "_test.go"
 
 	gogPrefix = "// gog:"
+
+	printErrorOffset = 3
 )
+
+var genSuffix = "gog"
+
+func SetGenSuffix(s string) {
+	genSuffix = s
+}
 
 var generators = map[string]Plugin{}
 
@@ -103,12 +110,11 @@ func isTagged(gofile string) bool {
 func ParseGoFileAndGenerateFile(gofile string) {
 	p := parseGoFile(gofile)
 
-	idx := strings.LastIndex(gofile, ".go")
-	if idx == -1 {
+	if !strings.HasSuffix(gofile, goFilesExt) {
 		log.Fatalf("invalid file: %s", gofile)
 	}
-	name := gofile[:idx]
-	fileName := fmt.Sprintf("%s_gog.go", name)
+	name := gofile[:len(gofile)-len(goFilesExt)]
+	fileName := fmt.Sprintf("%s_%s.go", name, genSuffix)
 	p.generateGoFile(fileName)
 }
 
@@ -158,7 +164,7 @@ func NewParser(parsedFile *ast.File) *Parser {
 func (p *Parser) generateGoFile(filename string) {
 	code, err := p.GenerateCode(filename)
 	die(err, "Generating code")
-	err = ioutil.WriteFile(filename, code, 0o644)
+	err = os.WriteFile(filename, code, 0o644)
 	die(err, "Writing output")
 }
 
@@ -230,8 +236,8 @@ func printLine(code, errMsg string) {
 		log.Printf("> failed to identify line from: %s: %s", errMsg, err)
 		return
 	}
-	lower := line - 3
-	upper := line + 3
+	lower := line - printErrorOffset
+	upper := line + printErrorOffset
 	scanner := bufio.NewScanner(strings.NewReader(code))
 	cnt := 0
 	for scanner.Scan() {

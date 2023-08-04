@@ -42,6 +42,13 @@ func TestCustomPlugin(t *testing.T) {
 				return 1, nil
 			}
 
+			// gog:@transactional
+			// gog:@monitor {"threshold": 1}
+			func (f Foo) ReverseAspectHandle(ctx context.Context, code string) (int, error) {
+				fmt.Println("receive code:", code)
+				return 1, nil
+			}
+
 			// gog:@secured {"roles": ["user"]}
 			func (f Foo) WhoAmI(ctx context.Context) (string, error) {
 				// gets user from context, whatever
@@ -96,6 +103,32 @@ func (a *FooAspect) Handle(ctx context.Context, code string) (int, error) {
 		}()
 		return fn1(ctx, code)
 	}
+
+	return fn0(ctx, code)
+}
+
+func (a *FooAspect) ReverseAspectHandle(ctx context.Context, code string) (int, error) {
+	// monitor aspect
+	fn1 := func(ctx context.Context, code string) (int, error) {
+		now := time.Now()
+		defer func() {
+			if time.Since(now) > 1*time.Second {
+				fmt.Println("slow call")
+			}
+		}()
+		return a.Next.ReverseAspectHandle(ctx, code)
+	}
+
+	// transactional aspect
+	fn0 := func(ctx context.Context, code string) (int, error) {
+		var r0 int
+		var r1 error
+		r1 = fake.WithTx(ctx, func(s string) error {
+			r0, r1 = fn1(ctx, code)
+			return r1
+		}) // end of WithTx
+		return r0, r1
+	} // end of tx
 
 	return fn0(ctx, code)
 }
