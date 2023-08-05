@@ -34,11 +34,21 @@ func SetGenSuffix(s string) {
 
 var generators = map[string]Plugin{}
 
+func UnregisterAll() {
+	generators = map[string]Plugin{}
+}
+
+func Unregister(gen Plugin) {
+	name := gen.Name()
+	delete(generators, name)
+	log.Printf("Unregistered generator: %s\n", name)
+}
+
 func Register(gen Plugin) {
 	name := gen.Name()
 	// TODO: don't allow if 'name' already exists
 	generators[name] = gen
-	log.Printf("Registering generator: %s\n", name)
+	log.Printf("Registered generator: %s\n", name)
 }
 
 type Plugin interface {
@@ -49,28 +59,40 @@ type Plugin interface {
 	Flush() []byte
 }
 
-func ScanCurrentDir() {
-	ScanDir(".")
+type ScanOptions struct {
+	dirOut string
 }
 
-func ScanDir(dir string) {
+type ScanOption func(*ScanOptions)
+
+func WithDirOut(dirOut string) ScanOption {
+	return func(so *ScanOptions) {
+		so.dirOut = dirOut
+	}
+}
+
+func ScanCurrentDir(options ...ScanOption) {
+	ScanDir(".", options...)
+}
+
+func ScanDir(dir string, options ...ScanOption) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for _, file := range files {
-		parseGoFileIfTagged(file.Name())
+		parseAndGenerateIfTagged(file.Name(), dir, options...)
 	}
 }
 
-func ScanCurrentDirAndSubDirs() {
-	ScanDirAndSubDirs(".")
+func ScanCurrentDirAndSubDirs(options ...ScanOption) {
+	ScanDirAndSubDirs(".", options...)
 }
 
-func ScanDirAndSubDirs(dir string) {
+func ScanDirAndSubDirs(dir string, options ...ScanOption) {
 	err := filepath.Walk(dir, func(path string, file os.FileInfo, err error) error {
-		parseGoFileIfTagged(path)
+		parseAndGenerateIfTagged(path, dir, options...)
 		return nil
 	})
 	if err != nil {
@@ -78,9 +100,9 @@ func ScanDirAndSubDirs(dir string) {
 	}
 }
 
-func parseGoFileIfTagged(name string) {
-	if strings.HasSuffix(name, goFilesExt) && !strings.HasSuffix(name, goTestFilesExt) && isTagged(name) {
-		ParseGoFileAndGenerateFile(name)
+func parseAndGenerateIfTagged(fullFileName, dirIn string, options ...ScanOption) {
+	if strings.HasSuffix(fullFileName, goFilesExt) && !strings.HasSuffix(fullFileName, goTestFilesExt) && isTagged(fullFileName) {
+		parseGoFileAndGenerateFile(fullFileName, dirIn, options...)
 	}
 }
 
@@ -107,14 +129,27 @@ func isTagged(gofile string) bool {
 	return false
 }
 
-func ParseGoFileAndGenerateFile(gofile string) {
-	p := parseGoFile(gofile)
+func ScanAndGenerateFile(fullFileName string) {
+	parseGoFileAndGenerateFile(fullFileName, "")
+}
 
-	if !strings.HasSuffix(gofile, goFilesExt) {
-		log.Fatalf("invalid file: %s", gofile)
+func parseGoFileAndGenerateFile(fullFileName, dirIn string, options ...ScanOption) {
+	p := parseGoFile(fullFileName)
+
+	if !strings.HasSuffix(fullFileName, goFilesExt) {
+		log.Fatalf("invalid file: %s", fullFileName)
 	}
-	name := gofile[:len(gofile)-len(goFilesExt)]
+	name := fullFileName[:len(fullFileName)-len(goFilesExt)]
 	fileName := fmt.Sprintf("%s_%s.go", name, genSuffix)
+
+	opts := ScanOptions{}
+	for _, opt := range options {
+		opt(&opts)
+	}
+
+	if opts.dirOut != "" && opts.dirOut != dirIn {
+		fileName = strings.Replace(fileName, dirIn, opts.dirOut, 1)
+	}
 	p.generateGoFile(fileName)
 }
 

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/quintans/gog/config"
 	"github.com/quintans/gog/generator"
@@ -11,9 +12,11 @@ import (
 	_ "github.com/quintans/gog/plugins"
 )
 
+const recurSuffix = "/..."
+
 var (
 	fileName = flag.String("f", "", "file name to be parsed, overriding the environment variable GOFILE value")
-	recur    = flag.Bool("r", false, "scan current dir and sub directories")
+	dir      = flag.String("d", "", "dir to be parsed. If it ends with /...it will be recursive")
 	ver      = flag.Bool("v", false, "version")
 )
 
@@ -27,12 +30,17 @@ func main() {
 
 	fileToParse := getFileToParse()
 	if fileToParse != "" {
-		generator.ParseGoFileAndGenerateFile(fileToParse)
+		generator.ScanAndGenerateFile(fileToParse)
 		return
 	}
 
-	if *recur {
-		generator.ScanCurrentDirAndSubDirs()
+	if *dir != "" {
+		if strings.HasSuffix(*dir, recurSuffix) {
+			generator.ScanDirAndSubDirs(strings.TrimSuffix(*dir, recurSuffix))
+			return
+		}
+
+		generator.ScanDir(*dir)
 		return
 	}
 
