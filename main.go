@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -28,9 +29,14 @@ func main() {
 		return
 	}
 
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+
 	fileToParse := getFileToParse()
 	if fileToParse != "" {
-		generator.ScanAndGenerateFile(fileToParse)
+		generator.ScanAndGenerateFile(wd, fileToParse)
 		return
 	}
 

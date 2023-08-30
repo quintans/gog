@@ -17,7 +17,7 @@ func run(t *testing.T, in, want string) {
 	if err != nil {
 		panic(err)
 	}
-	code, err := generator.InspectGoFile(f).GenerateCode("src_gog.go")
+	code, err := generator.InspectGoFile(nil, f).GenerateCode("src_gog.go")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -23,6 +23,8 @@ type Mapper interface {
 	GetMethods() []Method
 	AddMethod(Method)
 	FindMethod(name string) (Method, bool)
+	GetPackage() string
+	GetDir() []string
 }
 
 type Struct struct {
@@ -30,6 +32,8 @@ type Struct struct {
 	Name    string
 	Fields  []Field
 	Methods []Method
+	Package string
+	Dir     []string
 }
 
 func (s *Struct) Type() MapperType {
@@ -65,10 +69,20 @@ func (s *Struct) FindMethod(name string) (Method, bool) {
 	return Method{}, false
 }
 
+func (s *Struct) GetPackage() string {
+	return s.Package
+}
+
+func (s *Struct) GetDir() []string {
+	return s.Dir
+}
+
 type Interface struct {
 	Tags
 	Name    string
 	Methods []Method
+	Package string
+	Dir     []string
 }
 
 func (s *Interface) Type() MapperType {
@@ -102,6 +116,14 @@ func (s *Interface) FindMethod(name string) (Method, bool) {
 		}
 	}
 	return Method{}, false
+}
+
+func (s *Interface) GetPackage() string {
+	return s.Package
+}
+
+func (s *Interface) GetDir() []string {
+	return s.Dir
 }
 
 type Method struct {
@@ -189,6 +211,15 @@ func (m *Method) Returns() string {
 	return strings.Join(res, ",")
 }
 
+func (m *Method) NamedReturns() string {
+	res := make([]string, len(m.Results))
+	for k, v := range m.Results {
+		res[k] = fmt.Sprintf("r%d %s", k, v.String())
+	}
+
+	return strings.Join(res, ",")
+}
+
 func (m *Method) ReturnZerosWithError(errVar string) string {
 	res := make([]string, len(m.Results))
 	for k, v := range m.Results {
@@ -200,6 +231,24 @@ func (m *Method) ReturnZerosWithError(errVar string) string {
 	}
 
 	return strings.Join(res, ",")
+}
+
+// HasErrorReturn returns if it has an error return and its position
+func (m *Method) ReturnAssignments() (all string, errVar string) {
+	rets := make([]string, 0, len(m.Results))
+
+	for k, a := range m.Results {
+		var v string
+		if a.IsError() {
+			v = "err"
+			errVar = v
+		} else {
+			v = fmt.Sprintf("r%d", k)
+		}
+		rets = append(rets, v)
+	}
+
+	return strings.Join(rets, ", "), errVar
 }
 
 func (Method) ZeroCondition(field string) string {

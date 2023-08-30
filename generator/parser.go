@@ -26,7 +26,7 @@ const (
 	printErrorOffset = 3
 )
 
-var genSuffix = "gog"
+var genSuffix = "gen"
 
 func SetGenSuffix(s string) {
 	genSuffix = s
@@ -81,8 +81,13 @@ func ScanDir(dir string, options ...ScanOption) {
 		log.Fatal(err)
 	}
 
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+
 	for _, file := range files {
-		parseAndGenerateIfTagged(file.Name(), dir, options...)
+		parseAndGenerateIfTagged(wd, file.Name(), dir, options...)
 	}
 }
 
@@ -91,8 +96,18 @@ func ScanCurrentDirAndSubDirs(options ...ScanOption) {
 }
 
 func ScanDirAndSubDirs(dir string, options ...ScanOption) {
-	err := filepath.Walk(dir, func(path string, file os.FileInfo, err error) error {
-		parseAndGenerateIfTagged(path, dir, options...)
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = filepath.Walk(absDir, func(path string, file os.FileInfo, err error) error {
+		parseAndGenerateIfTagged(wd, path, absDir, options...)
 		return nil
 	})
 	if err != nil {
@@ -100,9 +115,9 @@ func ScanDirAndSubDirs(dir string, options ...ScanOption) {
 	}
 }
 
-func parseAndGenerateIfTagged(fullFileName, dirIn string, options ...ScanOption) {
+func parseAndGenerateIfTagged(workDir, fullFileName, dirIn string, options ...ScanOption) {
 	if strings.HasSuffix(fullFileName, goFilesExt) && !strings.HasSuffix(fullFileName, goTestFilesExt) && isTagged(fullFileName) {
-		parseGoFileAndGenerateFile(fullFileName, dirIn, options...)
+		parseGoFileAndGenerateFile(workDir, fullFileName, dirIn, options...)
 	}
 }
 
@@ -129,18 +144,25 @@ func isTagged(gofile string) bool {
 	return false
 }
 
-func ScanAndGenerateFile(fullFileName string) {
-	parseGoFileAndGenerateFile(fullFileName, "")
+func ScanAndGenerateFile(workDir, fullFileName string) {
+	parseGoFileAndGenerateFile(workDir, fullFileName, "")
 }
 
-func parseGoFileAndGenerateFile(fullFileName, dirIn string, options ...ScanOption) {
-	p := parseGoFile(fullFileName)
-
+func parseGoFileAndGenerateFile(workDir, fullFileName, dirIn string, options ...ScanOption) {
 	if !strings.HasSuffix(fullFileName, goFilesExt) {
 		log.Fatalf("invalid file: %s", fullFileName)
 	}
+
+	relativePath := strings.Replace(fullFileName, workDir, "", 1)
+	relativePathToRoot := strings.Split(relativePath, string(os.PathSeparator))
+
 	name := fullFileName[:len(fullFileName)-len(goFilesExt)]
 	fileName := fmt.Sprintf("%s_%s.go", name, genSuffix)
+
+	// drop file name
+	relativePathToRoot = relativePathToRoot[:len(relativePathToRoot)-1]
+
+	p := parseGoFile(relativePathToRoot, fullFileName)
 
 	opts := ScanOptions{}
 	for _, opt := range options {
@@ -153,21 +175,24 @@ func parseGoFileAndGenerateFile(fullFileName, dirIn string, options ...ScanOptio
 	p.generateGoFile(fileName)
 }
 
-func parseGoFile(gofile string) *Parser {
+func parseGoFile(relativePathToRoot []string, gofile string) *Parser {
 	log.Println("Parsing", gofile)
 
 	fs := token.NewFileSet()
 	parsedFile, err := parser.ParseFile(fs, gofile, nil, parser.ParseComments)
 	die(err, "parsing package: %s", gofile)
 
-	return InspectGoFile(parsedFile)
+	return InspectGoFile(relativePathToRoot, parsedFile)
 }
 
-func InspectGoFile(parsedFile *ast.File) *Parser {
+func InspectGoFile(relativePathToRoot []string, parsedFile *ast.File) *Parser {
 	g := NewParser(parsedFile)
 
 	ast.Inspect(parsedFile, g.genImp)
-	ast.Inspect(parsedFile, g.genDecl)
+	ast.Inspect(parsedFile, func(n ast.Node) bool {
+		return g.genDecl(relativePathToRoot, n)
+	})
+
 	ast.Inspect(parsedFile, g.funcDecl)
 
 	return g
@@ -175,7 +200,7 @@ func InspectGoFile(parsedFile *ast.File) *Parser {
 
 func die(err error, msg string, args ...interface{}) {
 	if err != nil {
-		log.Fatalf(msg+": %v", append(args, err))
+		log.Fatalf(msg+": %v", append(args, err)...)
 	}
 }
 
@@ -307,7 +332,7 @@ func (p *Parser) genImp(node ast.Node) bool {
 	return false
 }
 
-func (p *Parser) genDecl(node ast.Node) bool {
+func (p *Parser) genDecl(relativePathToRoot []string, node ast.Node) bool {
 	decl, ok := node.(*ast.GenDecl)
 	if !ok || decl.Tok != token.TYPE {
 		// We only care about type declarations.
@@ -321,6 +346,8 @@ func (p *Parser) genDecl(node ast.Node) bool {
 				Name:    tspec.Name.Name,
 				Fields:  make([]Field, 0),
 				Methods: make([]Method, 0),
+				Dir:     relativePathToRoot,
+				Package: p.parsedFile.Name.Name,
 			}
 			p.Mappers = append(p.Mappers, aStruct)
 			for _, astField := range iType.Fields.List {
@@ -330,7 +357,9 @@ func (p *Parser) genDecl(node ast.Node) bool {
 			aStruct.Tags = extractTagsFromDoc(decl.Doc)
 		case *ast.InterfaceType:
 			aInterface := &Interface{
-				Name: tspec.Name.Name,
+				Name:    tspec.Name.Name,
+				Dir:     relativePathToRoot,
+				Package: p.parsedFile.Name.Name,
 			}
 			for _, astField := range iType.Methods.List {
 				mName := astField.Names[0].Name
@@ -363,7 +392,7 @@ func (p *Parser) funcDecl(node ast.Node) bool {
 		if ok {
 			expr = startExpr.X
 		} else {
-			expr = field.Type.(ast.Expr)
+			expr = field.Type
 		}
 		ident := expr.(*ast.Ident)
 		for _, s := range p.Mappers {
@@ -464,7 +493,7 @@ func parseType(expr ast.Expr) Kinder {
 		}
 		kind = &Method{Args: args, Results: results}
 	default:
-		fmt.Printf("unknown type %+v", n)
+		fmt.Printf("not handling type %T\n", n)
 	}
 	return kind
 }
