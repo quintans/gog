@@ -16,7 +16,7 @@ generates:
 Comment your struct, with the generator tag `// gog:record` and then execute `go generate ./...`.
 
 > Using `go generate ./...` will only process files annotated with `//go:generate gog` .
-> Running `gog -r` will recursively scan the directories looking for go code with a recognizable tag
+> Running `gog -d <some dir>/...` will recursively scan the directories looking for go code with a recognizable tag
 > `// gog:`
 
 
@@ -96,7 +96,7 @@ func (f Foo) String() string {
 
 (see the tests in package `plugins` for more examples)
 
-> it is also possible to extend this use aspects as seen in [here](./plugins/aspect_plugin_test.go)
+> it is also possible to extend this create your own plugins like the one in [here](./plugins/aspect_custom_test.go)
 
 ## Guide
 
